@@ -1,6 +1,6 @@
 #pragma once
-#include "stdafx.h"
-#include "mapData.h"
+#include "../stdafx.h"
+#include "../mapData/mapData.h"
 
 class GameMgr
 {
@@ -49,7 +49,7 @@ public:
 	void npc_coll_check(int id);
 
 	//bullet collision
-	static bool collide_object_by_ray_intersection(const BoundingOrientedBox& object_bounding_box, const Vector3& position, const Vector3& direction, float* distance);
+	static bool checkRayIntersection(const BoundingOrientedBox& object_bounding_box, const Vector3& position, const Vector3& direction, float* distance);
 	void find_collide_object(int p_id);
 	void find_collide_object_shot_gun(int p_id);
 	void pick_interaction_object(int p_id);

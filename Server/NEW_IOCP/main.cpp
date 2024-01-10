@@ -1,9 +1,9 @@
 ﻿#pragma once
-#include "LobbyMgr.h"
+#include "./LobbyMgr/LobbyMgr.h"
+#include <winsock2.h>
 
 using namespace std;
 using namespace chrono;
-
 
 LobbyMgr	lobby_mgr;
 HANDLE		h_iocp;

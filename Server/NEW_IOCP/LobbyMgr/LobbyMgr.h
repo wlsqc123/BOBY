@@ -1,8 +1,7 @@
 #pragma once
-#include "GameMgr.h"
-#include <map>
-#include <sqlext.h> 
-//
+#include "../GameMgr/GameMgr.h"
+#include <sqlext.h>
+
 //#define SERVERIP	"211.252.22.159"
 //#define SERVERPORT	6112
 #define SERVERIP	"127.0.0.1"

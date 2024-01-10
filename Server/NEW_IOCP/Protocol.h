@@ -16,7 +16,7 @@ constexpr int doorobject_num = 6;
 constexpr int leverobject_num = 1;
 
 constexpr int max_object = magmamonster_num + golemmonster_num + orgemonster_num;
-constexpr int max_intraction = chestobject_num + doorobject_num + leverobject_num + 1/* + 6*/;
+constexpr int max_interaction = chestobject_num + doorobject_num + leverobject_num + 1/* + 6*/;
 constexpr int max_player = 4;
 constexpr int max_name = 16;
 
@@ -85,27 +85,27 @@ struct Bullet
 struct player_Status
 {
 	int hp;
-	int maxHp;
-	float attackSpeed;
+	int max_hp;
+	float attack_speed;
 };
 
 struct CS_ITEM
 {
-	int chestId;
-	int itemId;
-	bool doSend;
+	int chest_id;
+	int item_id;
+	bool do_send;
 };
 
 struct item_packet
 {
-	bool isAlive;
-	ITEM_TYPE itemType;
+	bool is_alive;
+	ITEM_TYPE item_type;
 };
 
 struct attack_packet
 {
 	Vector3			pos;
-	bool			activeEnable;
+	bool			active_enable;
 };
 
 struct player_packet
@@ -113,14 +113,14 @@ struct player_packet
 	WORD			id;
 	Vector3			pos;
 	Vector3			look;
-	Vector3			cameraLook;
+	Vector3			camera_look;
 	player_Status	ps;
 	obj_state		state;
 	Bullet			bullet[5];
-	bool			reloadEnable;
+	bool			reload_enable;
 	short			ammo;
-	ITEM_TYPE		currentItem;
-	int				zoneNum;
+	ITEM_TYPE		current_item;
+	int				zone_num;
 };
 
 struct npc_info
@@ -129,7 +129,7 @@ struct npc_info
 	Vector3		pos;
 	Vector3		look;
 	int			hp;
-	bool		attackEnable;
+	bool		attack_enable;
 	obj_state	state;
 };
 
@@ -140,7 +140,7 @@ struct interaction_packet
 	Vector3		look;
 	obj_state	state;
 	item_packet   item[4];
-	bool		interactEnable;
+	bool		interact_enable;
 };
 
 struct sc_ingame_packet
@@ -150,7 +150,7 @@ struct sc_ingame_packet
 	int					id;
 	player_packet		player[max_player];
 	npc_info			npc[max_object];
-	interaction_packet  interaction[max_intraction];
+	interaction_packet  interaction[max_interaction];
 	attack_packet		attack[20];
 	attack_packet		stone[10];
 	int					play_time;

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "../stdafx.h"
 #include <cassert>
 #include "Matrix4x4.h"
 #include "Mathf.h"
@@ -113,7 +113,7 @@ Quaternion Matrix4x4::rotation() const
 		DirectX::XMQuaternionRotationMatrix(
 			DirectX::XMLoadFloat4x4(this))
 	);
-	return result.normalized();
+	return result.Normalized();
 }
 
 Matrix4x4 Matrix4x4::transpose() const
