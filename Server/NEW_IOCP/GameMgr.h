@@ -45,7 +45,7 @@ public:
 	static void key_input(cs_ingame_packet cs_packet);
 	void process_packet(int p_id, unsigned char* p_buf);
 
-	void player_coll_check(int id);
+	void player_coll_check(int id) const;
 	void npc_coll_check(int id);
 
 	//bullet collision

@@ -423,7 +423,7 @@ void GameMgr::init_game(int id[4])
         float x_pos, y_pos, z_pos;
         float height = 1000;
 
-        for (int i = 0, x = 0; x < x_objects; x++)
+        for (int x = 0; x < x_objects; x++)
         {
             for (int z = 0; z < z_objects; z++)
             {
@@ -525,7 +525,7 @@ void GameMgr::init_game(int id[4])
     {
         //2층위 난간
         float x_pos, y_pos, z_pos;
-        float height = 1000;
+        // float height = 1000;
         structure st;
 
         st.type = fence;
@@ -552,7 +552,7 @@ void GameMgr::init_game(int id[4])
     //중앙방 작은 층 난간
     {
         float x_pos, y_pos, z_pos;
-        float height = 1000;
+        // float height = 1000;
         structure st;
 
         st.type = fence;
@@ -570,7 +570,7 @@ void GameMgr::init_game(int id[4])
     {
         //입구에서 출구바라보고 계단왼쪽난간
         float x_pos, y_pos, z_pos;
-        float height = 1000;
+        // float height = 1000;
         structure st;
 
         st.type = fence;
@@ -950,7 +950,7 @@ void GameMgr::key_input(cs_ingame_packet cs_packet)
 
 void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
 {
-    const auto cspacket = reinterpret_cast<cs_ingame_packet*>(p_buf);
+    const auto cs_packet = reinterpret_cast<cs_ingame_packet*>(p_buf);
 
         for (int i = 0; i < 5; ++i)
         {
@@ -962,28 +962,28 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
 
         if (arr_player[p_id].state != dead)
         {
-            if (cspacket->input.Key_W == true) {
+            if (cs_packet->input.Key_W == true) {
                 arr_player[p_id].state = ::move;
-                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z + cspacket->look.z * arr_player[p_id].ps.speed;
-                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x + cspacket->look.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z + cs_packet->look.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x + cs_packet->look.x * arr_player[p_id].ps.speed;
             }
-            if (cspacket->input.Key_S == true) {
+            if (cs_packet->input.Key_S == true) {
                 arr_player[p_id].state = ::move;
-                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z - cspacket->look.z * arr_player[p_id].ps.speed;
-                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x - cspacket->look.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z - cs_packet->look.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x - cs_packet->look.x * arr_player[p_id].ps.speed;
             }
-            if (cspacket->input.Key_A == true) {
+            if (cs_packet->input.Key_A == true) {
                 arr_player[p_id].state = ::move;
-                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z + cspacket->look.x * arr_player[p_id].ps.speed;
-                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x - cspacket->look.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z + cs_packet->look.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x - cs_packet->look.z * arr_player[p_id].ps.speed;
             }
-            if (cspacket->input.Key_D == true) {
+            if (cs_packet->input.Key_D == true) {
                 arr_player[p_id].state = ::move;
-                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z - cspacket->look.x * arr_player[p_id].ps.speed;
-                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x + cspacket->look.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.z = arr_player[p_id].cur_pos.z - cs_packet->look.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].cur_pos.x = arr_player[p_id].cur_pos.x + cs_packet->look.z * arr_player[p_id].ps.speed;
             }
-            if (!(cspacket->input.Key_W || cspacket->input.Key_S || cspacket->input.Key_A || cspacket->input.Key_D)) arr_player[p_id].state = ::none;
-            if (cspacket->input.Key_Q == true) {
+            if (!(cs_packet->input.Key_W || cs_packet->input.Key_S || cs_packet->input.Key_A || cs_packet->input.Key_D)) arr_player[p_id].state = ::none;
+            if (cs_packet->input.Key_Q == true) {
                 if (arr_player[p_id].active_item == ITEM_MAXHPUP)
                 {
                     arr_player[p_id].ps.hp = Mathf::Min(arr_player[p_id].ps.hp + 20, arr_player[p_id].ps.max_hp);
@@ -995,25 +995,25 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
                 }
                 arr_player[p_id].active_item = ITEM_EMPTY;
             }
-            if (cspacket->input.Key_B == true) {
+            if (cs_packet->input.Key_B == true) {
                 arr_player[p_id].cur_pos = Vector3(487, 0, 589);
                 arr_player[p_id].cur_pos.y = map_data->GetHeight(arr_player[p_id].cur_pos.x, arr_player[p_id].cur_pos.z) * map_data->GetScale().y + 100;
                 zone_level_ = 4;
             }
-            if (cspacket->input.Key_N == true) {
+            if (cs_packet->input.Key_N == true) {
                 arr_player[p_id].cur_pos = Vector3(557.519, 0, 1202.554);
                 arr_player[p_id].cur_pos.y = map_data->GetHeight(arr_player[p_id].cur_pos.x, arr_player[p_id].cur_pos.z) * map_data->GetScale().y + 100;
                 zone_level_ = 3;
             }
-            if (cspacket->input.Key_M == true) {
+            if (cs_packet->input.Key_M == true) {
                 arr_player[p_id].ps.attack_damage = 500;
             }
         }
-        if (cspacket->input.Key_E == true) {
+        if (cs_packet->input.Key_E == true) {
             pick_interaction_object(p_id);
         }
 
-        if (cspacket->input.Key_R == true) {
+        if (cs_packet->input.Key_R == true) {
             if(!arr_player[p_id].reload_enable && arr_player[p_id].ps.ammo < arr_player[p_id].ps.max_ammo)
             {
                 arr_player[p_id].reload_enable = true;
@@ -1022,10 +1022,10 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
         }
 
         //아이템 처리
-        if (cspacket->item.doSend)
+        if (cs_packet->item.doSend)
         {
-            const int chest_id = cspacket->item.chestId;
-            const int item_id = cspacket->item.itemId;
+            const int chest_id = cs_packet->item.chestId;
+            const int item_id = cs_packet->item.itemId;
             if(!interaction_[chest_id].item.at(item_id).getEnable)
             { 
                 arr_player[p_id].pl_items.find(interaction_[chest_id].item.at(item_id).item)->second += 1;
@@ -1034,7 +1034,7 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
             }
         }
 
-        if (cspacket->type == CS_SHOOT_PACKET && arr_player[p_id].state != dead) {
+        if (cs_packet->type == CS_SHOOT_PACKET && arr_player[p_id].state != dead) {
             if (arr_player[p_id].ps.ammo > 0 && !arr_player[p_id].reload_enable) {
                 arr_player[p_id].state = attack;
                 arr_player[p_id].ps.ammo--;
@@ -1065,8 +1065,8 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
     else
         arr_player[p_id].cur_pos.y = map_data->GetHeight(arr_player[p_id].cur_pos.x, arr_player[p_id].cur_pos.z) * map_data->GetScale().y + 100;
 
-    arr_player[p_id].pl_look = cspacket->look;
-    arr_player[p_id].cam_look = cspacket->cameraLook;
+    arr_player[p_id].pl_look = cs_packet->look;
+    arr_player[p_id].cam_look = cs_packet->cameraLook;
 
     const XMFLOAT4X4 unit
     (
@@ -1088,7 +1088,7 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
 }
 
 
-void GameMgr::player_coll_check(const int id)
+void GameMgr::player_coll_check(const int id) const
 {
     for (int i = 0; i < structure_.size(); ++i) {
         const ContainmentType contain_type = arr_player[id].OOBB.Contains(structure_[i].OOBB);
@@ -1192,26 +1192,24 @@ bool GameMgr::collide_object_by_ray_intersection(const BoundingOrientedBox& obje
     const XMVECTOR xm_ray_origin = XMLoadFloat3(&position);
     const XMVECTOR xm_ray_direction = XMLoadFloat3(&direction);
     return object_bounding_box.Intersects(xm_ray_origin, xm_ray_direction, *distance);
-} // ���� �߻�
+}
 
 void GameMgr::pick_interaction_object(int p_id)
 {
     bool			is_intersected = false;
-    float			f_hit_distance = 75.f, f_nearest_hit_distance = 150.f;
-    obj_type object_type = type_none;
+    float			hit_distance = 75.f, nearest_hit_distance = 150.f;
+    obj_type        object_type = type_none;
     int             object_id = 0;
     Vector3         camera_pos = arr_player[p_id].cur_pos;
 
     camera_pos.y += 20;
-    // Matrix4x4		matColidePosition = Matrix4x4::identity;
-
 
     for (int i = 0; i < max_intraction; ++i) // monster check
     {
-        is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &f_hit_distance);
-        if (is_intersected && (f_hit_distance < f_nearest_hit_distance))
+        is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        if (is_intersected && (hit_distance < nearest_hit_distance))
         {
-            f_nearest_hit_distance = f_hit_distance;
+            nearest_hit_distance = hit_distance;
             object_type = type_static;
             object_id = i;
         }
@@ -1223,7 +1221,7 @@ void GameMgr::pick_interaction_object(int p_id)
             bool is_open = true;
             if (interaction_[object_id].zone_num != 99)
             {
-                for (auto p : game_zones_.at(interaction_[object_id].zone_num).monster_id)
+                for (const auto p : game_zones_.at(interaction_[object_id].zone_num).monster_id)
                 {
                     if (npc_[p].hp > 0) is_open = false;
                 }
@@ -1240,20 +1238,20 @@ void GameMgr::find_collide_object(int p_id)
     Vector3         camera_pos = arr_player[p_id].cur_pos;
     camera_pos.y += 20;
     bool			is_intersected = false;
-    float			f_hit_distance = FLT_MAX, f_nearest_hit_distance = FLT_MAX;
+    float			hit_distance = FLT_MAX, nearest_hit_distance = FLT_MAX;
     int             object_id = 0;
     obj_type object_type = type_none;
     if (arr_player[p_id].cam_look == Vector3(0, 0, 0)) arr_player[p_id].cam_look = Vector3(0, 1, 0);
     arr_player[p_id].bullet[0].in_use = true;
 
-    Matrix4x4		mat_collide_position = Matrix4x4::identity; // identity: 4x4 danwi
+    Matrix4x4		mat_collide_position = Matrix4x4::identity; // identity: 4x4 unit
     for (int i = 0; i < max_object; ++i) // monster check
     {
         if (npc_[i].hp <= 0) continue;
-        is_intersected = collide_object_by_ray_intersection(npc_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &f_hit_distance);
-        if (is_intersected && (f_hit_distance < f_nearest_hit_distance))
+        is_intersected = collide_object_by_ray_intersection(npc_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        if (is_intersected && (hit_distance < nearest_hit_distance))
         {
-            f_nearest_hit_distance = f_hit_distance;
+            nearest_hit_distance = hit_distance;
             object_type = type_npc;
             object_id = i;
         }
@@ -1262,10 +1260,10 @@ void GameMgr::find_collide_object(int p_id)
     for (int i = 0; i < max_intraction; ++i) // monster check
     {
         if (interaction_[i].object_name == door && interaction_[i].interact_enable == true) continue;
-        is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &f_hit_distance);
-        if (is_intersected && (f_hit_distance < f_nearest_hit_distance))
+        is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        if (is_intersected && (hit_distance < nearest_hit_distance))
         {
-            f_nearest_hit_distance = f_hit_distance;
+            nearest_hit_distance = hit_distance;
             object_type = type_static;
             object_id = i;
         }
@@ -1274,10 +1272,10 @@ void GameMgr::find_collide_object(int p_id)
     for (int i = 0; i < structure_.size(); ++i)
     {
         if (structure_[i].type == fence) continue;
-        is_intersected = collide_object_by_ray_intersection(structure_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &f_hit_distance);
-        if (is_intersected && (f_hit_distance < f_nearest_hit_distance))
+        is_intersected = collide_object_by_ray_intersection(structure_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        if (is_intersected && (hit_distance < nearest_hit_distance))
         {
-            f_nearest_hit_distance = f_hit_distance;
+            nearest_hit_distance = hit_distance;
             object_type = type_static;
             object_id = i;
         }
@@ -1286,13 +1284,13 @@ void GameMgr::find_collide_object(int p_id)
     ////////////////////////////////////////
     if (type_none != object_type)
     {
-        const auto f_distance = static_cast<float>(pow(f_nearest_hit_distance, 2));
-        const float f_sum_look_pos = static_cast<float>(pow(arr_player[p_id].cam_look.x, 2)) + static_cast<float>(pow(arr_player[p_id].cam_look.y, 2)) + static_cast<float>(pow(arr_player[p_id].cam_look.z, 2));
-        const float f_final = f_distance / f_sum_look_pos;
+        const auto distance = static_cast<float>(pow(nearest_hit_distance, 2));
+        const float sum_look_pos = static_cast<float>(pow(arr_player[p_id].cam_look.x, 2)) + static_cast<float>(pow(arr_player[p_id].cam_look.y, 2)) + static_cast<float>(pow(arr_player[p_id].cam_look.z, 2));
+        const float final = distance / sum_look_pos;
         // return collision CurPos (burn effects)
-        mat_collide_position._41 = camera_pos.x + arr_player[p_id].cam_look.x * (sqrt(f_final) - 2);
-        mat_collide_position._42 = camera_pos.y + arr_player[p_id].cam_look.y * (sqrt(f_final) - 2);
-        mat_collide_position._43 = camera_pos.z + arr_player[p_id].cam_look.z * (sqrt(f_final) - 2);
+        mat_collide_position._41 = camera_pos.x + arr_player[p_id].cam_look.x * (sqrt(final) - 2);
+        mat_collide_position._42 = camera_pos.y + arr_player[p_id].cam_look.y * (sqrt(final) - 2);
+        mat_collide_position._43 = camera_pos.z + arr_player[p_id].cam_look.z * (sqrt(final) - 2);
 
         arr_player[p_id].bullet[0].pos.x = mat_collide_position._41;
         arr_player[p_id].bullet[0].pos.y = mat_collide_position._42;
@@ -1308,7 +1306,7 @@ void GameMgr::find_collide_object(int p_id)
         if (npc_[object_id].state != dead)
         {
             arr_player[p_id].bullet[0].type = type_npc;
-            for (int p : game_zones_.at(npc_[object_id].zone_num).monster_id)
+            for (const int p : game_zones_.at(npc_[object_id].zone_num).monster_id)
             {
                 if (npc_[p].state != none) continue;
                 npc_[p].dest_pl = p_id;
@@ -1372,7 +1370,7 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
     for (int j = 0; j < 5; ++j)
     {
         bool			is_intersected = false;
-        float			f_hit_distance = FLT_MAX, nearest_hit_distance = FLT_MAX;
+        float			hit_distance = FLT_MAX, nearest_hit_distance = FLT_MAX;
         int             object_id = 0; 
         obj_type object_type = type_none;
 
@@ -1382,14 +1380,14 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
         camera_look.z += Mathf::RandF(-0.15f, 0.15f);
         camera_look = camera_look.normalized();
         arr_player[p_id].bullet[j].in_use = true;
-        Matrix4x4		mat_collide_position = Matrix4x4::identity; // identity: 4x4 danwi
+        Matrix4x4		mat_collide_position = Matrix4x4::identity; // identity: 4x4 unit
         for (int i = 0; i < max_object; ++i) // monster check
         {
             if (npc_[i].hp <= 0) continue;
-            is_intersected = collide_object_by_ray_intersection(npc_[i].OOBB, camera_pos, camera_look, &f_hit_distance);
-            if (is_intersected && (f_hit_distance < nearest_hit_distance))
+            is_intersected = collide_object_by_ray_intersection(npc_[i].OOBB, camera_pos, camera_look, &hit_distance);
+            if (is_intersected && (hit_distance < nearest_hit_distance))
             {
-                nearest_hit_distance = f_hit_distance;
+                nearest_hit_distance = hit_distance;
                 object_type = type_npc;
                 object_id = i;
             }
@@ -1398,10 +1396,10 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
         for (int i = 0; i < max_intraction; ++i) // monster check
         {
             if (interaction_[i].object_name == door && interaction_[i].interact_enable == true) continue;
-            is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, camera_look, &f_hit_distance);
-            if (is_intersected && (f_hit_distance < nearest_hit_distance))
+            is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, camera_look, &hit_distance);
+            if (is_intersected && (hit_distance < nearest_hit_distance))
             {
-                nearest_hit_distance = f_hit_distance;
+                nearest_hit_distance = hit_distance;
                 object_type = type_static;
                 object_id = i;
             }
@@ -1410,10 +1408,10 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
         for (int i = 0; i < structure_.size(); ++i)
         {
             if (structure_[i].type == fence) continue;
-            is_intersected = collide_object_by_ray_intersection(structure_[i].OOBB, camera_pos, camera_look, &f_hit_distance);
-            if (is_intersected && (f_hit_distance < nearest_hit_distance))
+            is_intersected = collide_object_by_ray_intersection(structure_[i].OOBB, camera_pos, camera_look, &hit_distance);
+            if (is_intersected && (hit_distance < nearest_hit_distance))
             {
-                nearest_hit_distance = f_hit_distance;
+                nearest_hit_distance = hit_distance;
                 object_type = type_static;
                 object_id = i;
             }
@@ -1444,7 +1442,7 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
             if (npc_[object_id].state != dead)
             {
                 arr_player[p_id].bullet[j].type = type_npc;
-                for (int p : game_zones_.at(npc_[object_id].zone_num).monster_id)
+                for (const int p : game_zones_.at(npc_[object_id].zone_num).monster_id)
                 {
                     if (npc_[p].state != none) continue;
                     npc_[p].dest_pl = p_id;
