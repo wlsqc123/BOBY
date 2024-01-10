@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "./LobbyMgr/LobbyMgr.h"
+#include "./Lobby/LobbyMgr.h"
 #include <winsock2.h>
 
 using namespace std;
