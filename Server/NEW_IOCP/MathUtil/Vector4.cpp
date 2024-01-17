@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "../stdafx.h"
 #include "Vector4.h"
 #include "Mathf.h"
 #include "Vector3.h"

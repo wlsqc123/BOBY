@@ -1,7 +1,9 @@
 ﻿#include "LobbyMgr.h"
+#include "iostream"
+#include "MSWSock.h"
+#include "WS2tcpip.h"
 
-
-LobbyMgr::LobbyMgr()
+LobbyMgr::LobbyMgr():retval(0),addrlen(0),buf{},wsa(),sock(0),listen_sock(0),client_sock(0),serveraddr(),user_id{},db_buf{},user_time(0),henv(nullptr),hdbc(nullptr),retcode(0),szUser_Name{},dUser_time(0),dUser_level(0),ip_addr{},clientaddr(),CSpacket(), SCpacket()
 {
     for (int i = 0; i < MAX_USERS; ++i) {
         arr_player[i].ready = false;
@@ -13,9 +15,7 @@ LobbyMgr::LobbyMgr()
             //strcpy(arr_lobby[r_id].pl[p_id].name);
             ;
     }
-
-    
- }
+}
 
 LobbyMgr::~LobbyMgr()
 {
@@ -262,7 +262,7 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
             }
             
             arr_game[r_id].InitGame(id);
-            arr_game[r_id].s_time = chrono::system_clock::now();
+            arr_game[r_id].startTime = chrono::system_clock::now();
         }
         else
             do_send(p_id, &scpacket);
@@ -274,7 +274,7 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
 
         int r_id = arr_player[p_id].r_id;
 
-        arr_game[r_id].process_packet(p_id, p_buf);
+        arr_game[r_id].ProcessPacket(p_id, p_buf);
 
         scpacket = arr_game[r_id].GetPacket(scpacket);
         
@@ -328,7 +328,7 @@ void LobbyMgr::Update()
         for (auto& p : arr_game)
         {
             if (!p.isRunning) continue;
-            if (chrono::system_clock::now() - p.cur_update_time > 16ms)
+            if (chrono::system_clock::now() - p.currentUpdateTime > 16ms)
                 p.Update();
         }
     }

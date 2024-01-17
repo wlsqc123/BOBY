@@ -1,26 +1,17 @@
 #pragma once
 
 #include <winsock2.h>
-#include <WS2tcpip.h>
-#include <MSWSock.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
 #include <vector>
 #include <chrono>
 #include <thread>
 #include <mutex>
 #include <atomic>
 #include <map>
-#include <queue>
 #include <array>
 
 #include <d3d12.h>
-#include <dxgi1_4.h>
-#include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
-#include <DirectXColors.h>
 #include <DirectXCollision.h>
 
 #include "_pack.h"

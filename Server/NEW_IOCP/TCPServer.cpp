@@ -1,5 +1,7 @@
 ﻿#pragma once
-#include "LobbyMgr.h"
+#include "LobbyManager/LobbyMgr.h"
+#include "iostream"
+#include <MSWSock.h>
 
 using namespace std;
 using namespace chrono;

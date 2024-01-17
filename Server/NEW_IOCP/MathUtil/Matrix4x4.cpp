@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "../stdafx.h"
 #include <cassert>
 #include "Matrix4x4.h"
 #include "Mathf.h"

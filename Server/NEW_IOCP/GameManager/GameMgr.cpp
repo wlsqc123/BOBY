@@ -1,9 +1,16 @@
 #include "GameMgr.h"
+#include "iostream"
 #include <random>
 
+
+
 GameMgr::GameMgr()
+: currentZoneLevel_(0), roomId(0), playerIds{}
 {
-    mapData = new CHeightMapImage( _T("mapImage/map1.raw"), 513, 513, Vector3(10.0f, 25.0f, 10.0f));
+    mapData(std::make_unique<CHeightMapImage>(_T("mapImage/map1.raw"),
+        MAP_WIDTH, MAP_HEIGHT, Vector3(SCALE_X, SCALE_Y, SCALE_Z)));
+
+    currentUpdateTime = chrono::system_clock::now();
 }
 
 GameMgr::~GameMgr()
@@ -13,19 +20,19 @@ GameMgr::~GameMgr()
 void GameMgr::InitGame(int id[4])
 {
     float posX = 0.0f, posY = 0.0f, posZ = 0.0f;
-    gameZones.reserve(5);
-    zoneLevel = 0;
-    stoneTime = chrono::system_clock::now();
-    r_id = arr_player[id[0]].r_id;
+    zones_.reserve(5);
+    currentZoneLevel_ = 0;
+    lastStoneAttackTime_ = chrono::system_clock::now();
+    roomId = arr_player[id[0]].r_id;
 
     //PLAYER
     {
         for (int i = 0; i < MAX_PLAYER; ++i) {
-            pl_list[i] = id[i];
+            playerIds[i] = id[i];
         }
 
         for (int i = 0; i != MAX_PLAYER; ++i) {
-            int p_id = pl_list[i];
+            int p_id = playerIds[i];
 
             arr_player[p_id].id = p_id;
 
@@ -89,7 +96,7 @@ void GameMgr::InitGame(int id[4])
 
     //NPC
     {
-        npc.reserve(MAX_OBJECT);
+        npc_.reserve(MAX_OBJECT);
 
         NPC new_npc;
         posX = float(rand() % 2000 + 250);
@@ -107,7 +114,7 @@ void GameMgr::InitGame(int id[4])
             new_npc.attackRange = 1300;
             new_npc.sight = 1500;
             new_npc.coolTime = 1000;
-            npc.emplace_back(new_npc);
+            npc_.emplace_back(new_npc);
         }
         for (int i = 0; i < GOLEMMONSTER_NUM; ++i) {
             new_npc.mob = GOLEM;
@@ -117,7 +124,7 @@ void GameMgr::InitGame(int id[4])
             new_npc.sight = 350;
             new_npc.speed = 10;
             new_npc.coolTime = 1800;
-            npc.emplace_back(new_npc);
+            npc_.emplace_back(new_npc);
         }
         for (int i = 0; i < ORGEMONSTER_NUM; ++i) {
             new_npc.mob = OGRE;
@@ -127,7 +134,7 @@ void GameMgr::InitGame(int id[4])
             new_npc.speed = 8;
             new_npc.sight = 500;
             new_npc.coolTime = 1000;
-            npc.emplace_back(new_npc);
+            npc_.emplace_back(new_npc);
         }
 
         for (int i = 0; i < MAX_OBJECT; ++i) {
@@ -135,24 +142,24 @@ void GameMgr::InitGame(int id[4])
             switch (rand)
             {
             case 0:
-                npc[i].Lookvec = npc[i].CurPos;
-                npc[i].Lookvec.x += 1;
-                npc[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].CurPos;
+                npc_[i].Lookvec.x += 1;
+                npc_[i].Lookvec.normalized();
                 break;
             case 1:
-                npc[i].Lookvec = npc[i].CurPos;
-                npc[i].Lookvec.x -= 1;
-                npc[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].CurPos;
+                npc_[i].Lookvec.x -= 1;
+                npc_[i].Lookvec.normalized();
                 break;
             case 2:
-                npc[i].Lookvec = npc[i].CurPos;
-                npc[i].Lookvec.z += 1;
-                npc[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].CurPos;
+                npc_[i].Lookvec.z += 1;
+                npc_[i].Lookvec.normalized();
                 break;
             case 3:
-                npc[i].Lookvec = npc[i].CurPos;
-                npc[i].Lookvec.z -= 1;
-                npc[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].CurPos;
+                npc_[i].Lookvec.z -= 1;
+                npc_[i].Lookvec.normalized();
                 break;
             default:
                 break;
@@ -162,86 +169,86 @@ void GameMgr::InitGame(int id[4])
         Vector3 mob_look;
 
         //중앙 방 2층 2마리
-        npc[0].CurPos.x = 1706.f; npc[0].CurPos.z = 2045.f; npc[0].zoneNum = 1;
-        npc[1].CurPos.x = 1705.f; npc[1].CurPos.z = 3695.f; npc[1].zoneNum = 1;
+        npc_[0].CurPos.x = 1706.f; npc_[0].CurPos.z = 2045.f; npc_[0].zoneNum = 1;
+        npc_[1].CurPos.x = 1705.f; npc_[1].CurPos.z = 3695.f; npc_[1].zoneNum = 1;
 
         //중앙방 출구후 방 1마리
-        npc[2].CurPos.x = 4790.f; npc[2].CurPos.z = 1205.f; npc[2].zoneNum = 2;
+        npc_[2].CurPos.x = 4790.f; npc_[2].CurPos.z = 1205.f; npc_[2].zoneNum = 2;
         mob_look = { 1545.f, 0.f, 3296.f };
 
         for (int i = 0; i < 3; ++i)
         {
-            npc[i].Lookvec = mob_look - npc[i].CurPos;
-            npc[i].Lookvec.y = 0.f;
-            npc[i].Lookvec = npc[i].Lookvec.normalized();
+            npc_[i].Lookvec = mob_look - npc_[i].CurPos;
+            npc_[i].Lookvec.y = 0.f;
+            npc_[i].Lookvec = npc_[i].Lookvec.normalized();
         }
         //시작방 앞 2마리
-        npc[3].CurPos.x = 4675.15f; npc[3].CurPos.z = 4515.6f; npc[3].zoneNum = 0;
-        npc[4].CurPos.x = 4724.52f; npc[4].CurPos.z = 4877.16f; npc[4].zoneNum = 0;
+        npc_[3].CurPos.x = 4675.15f; npc_[3].CurPos.z = 4515.6f; npc_[3].zoneNum = 0;
+        npc_[4].CurPos.x = 4724.52f; npc_[4].CurPos.z = 4877.16f; npc_[4].zoneNum = 0;
         //중앙방 3마리
-        npc[5].CurPos.x = 4662.5f;  npc[5].CurPos.z = 2706.39f; npc[5].zoneNum = 1;
-        npc[6].CurPos.x = 2006.f;  npc[6].CurPos.z = 2045.f; npc[6].zoneNum = 1;
-        npc[7].CurPos.x = 1742.81; npc[7].CurPos.z = 2972.67f; npc[7].zoneNum = 1;     //중앙 2층 한가운데
+        npc_[5].CurPos.x = 4662.5f;  npc_[5].CurPos.z = 2706.39f; npc_[5].zoneNum = 1;
+        npc_[6].CurPos.x = 2006.f;  npc_[6].CurPos.z = 2045.f; npc_[6].zoneNum = 1;
+        npc_[7].CurPos.x = 1742.81; npc_[7].CurPos.z = 2972.67f; npc_[7].zoneNum = 1;     //중앙 2층 한가운데
 
         //보스전방
-        npc[8].CurPos.x = 384;  npc[8].CurPos.z = 1209; npc[8].zoneNum = 3;
+        npc_[8].CurPos.x = 384;  npc_[8].CurPos.z = 1209; npc_[8].zoneNum = 3;
         mob_look = { 800.f, 0.f, 2671.f };
 
         for (int i = 3; i < 9; ++i)
         {
-            npc[i].Lookvec = mob_look - npc[i].CurPos;
-            npc[i].Lookvec.y = 0.f;
-            npc[i].Lookvec = npc[i].Lookvec.normalized();
+            npc_[i].Lookvec = mob_look - npc_[i].CurPos;
+            npc_[i].Lookvec.y = 0.f;
+            npc_[i].Lookvec = npc_[i].Lookvec.normalized();
         }
 
         //보스
-        npc[9].CurPos.x = 4760.f; npc[9].CurPos.z = 575.f; npc[9].zoneNum = 4;
+        npc_[9].CurPos.x = 4760.f; npc_[9].CurPos.z = 575.f; npc_[9].zoneNum = 4;
 
 
         mob_look = { 1545.f, 0.f, 3296.f };
 
-        npc[9].Lookvec = mob_look - npc[9].CurPos;
-        npc[9].Lookvec.y = 0.f;
-        npc[9].Lookvec = npc[9].Lookvec.normalized();
+        npc_[9].Lookvec = mob_look - npc_[9].CurPos;
+        npc_[9].Lookvec.y = 0.f;
+        npc_[9].Lookvec = npc_[9].Lookvec.normalized();
 
-        npc[9].PrevPos = npc[9].CurPos;
+        npc_[9].PrevPos = npc_[9].CurPos;
 
         //시작방 앞 2마리
-        npc[10].CurPos.x = 3698.f; npc[10].CurPos.z = 4907.26f;   npc[10].zoneNum = 0;
-        npc[11].CurPos.x = 3725.89f; npc[11].CurPos.z = 4545.97f;   npc[11].zoneNum = 0;
+        npc_[10].CurPos.x = 3698.f; npc_[10].CurPos.z = 4907.26f;   npc_[10].zoneNum = 0;
+        npc_[11].CurPos.x = 3725.89f; npc_[11].CurPos.z = 4545.97f;   npc_[11].zoneNum = 0;
 
         //중앙 방배치몹
-        npc[12].CurPos.x = 3298.f; npc[12].CurPos.z = 2752.f;   npc[12].zoneNum = 1;    //중앙방 맵 한가운데 왼쪽몹
+        npc_[12].CurPos.x = 3298.f; npc_[12].CurPos.z = 2752.f;   npc_[12].zoneNum = 1;    //중앙방 맵 한가운데 왼쪽몹
 
         mob_look = { 2029.f, 0.f, 1500.f };
 
         for (int i = 9; i < 13; ++i)
         {
-            npc[i].Lookvec = mob_look - npc[i].CurPos;
-            npc[i].Lookvec.y = 0.f;
-            npc[i].Lookvec = npc[i].Lookvec.normalized();
+            npc_[i].Lookvec = mob_look - npc_[i].CurPos;
+            npc_[i].Lookvec.y = 0.f;
+            npc_[i].Lookvec = npc_[i].Lookvec.normalized();
         }
 
 
-        npc[13].CurPos.x = 3255.0f;  npc[13].CurPos.z = 3703.09f; npc[13].zoneNum = 1;       //중앙방 한가운데 오른쪽몹
-        npc[14].CurPos.x = 4610.76f; npc[14].CurPos.z = 2142.85f; npc[14].zoneNum = 1;      //중앙방 작은계단위
+        npc_[13].CurPos.x = 3255.0f;  npc_[13].CurPos.z = 3703.09f; npc_[13].zoneNum = 1;       //중앙방 한가운데 오른쪽몹
+        npc_[14].CurPos.x = 4610.76f; npc_[14].CurPos.z = 2142.85f; npc_[14].zoneNum = 1;      //중앙방 작은계단위
 
         //중앙방 출구 후 2마리
-        npc[15].CurPos.x = 4668.f; npc[15].CurPos.z = 1640.f; npc[15].zoneNum = 2;          //출구 바라보고 왼쪽
-        npc[16].CurPos.x = 4240.f; npc[16].CurPos.z = 1139.f; npc[16].zoneNum = 2;        //출구 바라보고 오른쪽
+        npc_[15].CurPos.x = 4668.f; npc_[15].CurPos.z = 1640.f; npc_[15].zoneNum = 2;          //출구 바라보고 왼쪽
+        npc_[16].CurPos.x = 4240.f; npc_[16].CurPos.z = 1139.f; npc_[16].zoneNum = 2;        //출구 바라보고 오른쪽
 
         //이상한놈들
-        npc[17].CurPos.x = 10036.f; npc[17].CurPos.z = 3532.05f; npc[17].zoneNum = 4;
+        npc_[17].CurPos.x = 10036.f; npc_[17].CurPos.z = 3532.05f; npc_[17].zoneNum = 4;
 
         mob_look = { 3256.f, 0.f, 2662.f };
 
         for (int i = 13; i < 18; ++i)
         {
-            npc[i].Lookvec = mob_look - npc[i].CurPos;
-            npc[i].Lookvec.y = 0.f;
-            npc[i].Lookvec = npc[i].Lookvec.normalized();
+            npc_[i].Lookvec = mob_look - npc_[i].CurPos;
+            npc_[i].Lookvec.y = 0.f;
+            npc_[i].Lookvec = npc_[i].Lookvec.normalized();
         }
-        for (auto& p : npc)
+        for (auto& p : npc_)
         {
             p.PrevPos = p.CurPos = GetPositionToHeightMap(p.CurPos.x, p.CurPos.z, 80);
             Matrix4x4 temp = Matrix4x4::identity;
@@ -254,7 +261,7 @@ void GameMgr::InitGame(int id[4])
 
     ///static object
     {
-        interaction.reserve(MAX_INTRACTION);
+        interactions_.reserve(MAX_INTRACTION);
 
         std::random_device rd;
 
@@ -277,27 +284,27 @@ void GameMgr::InitGame(int id[4])
             item.item = static_cast<ITEM_TYPE>(dis(gen));
             new_object.item.push_back(item);
             new_object.zoneNum = 99;
-            interaction.emplace_back(new_object);
+            interactions_.emplace_back(new_object);
         }
         for (int i = 0; i < DOOROBJECT_NUM; ++i) {
             INTERACTION new_object;
             new_object.objectName = DOOR;
             new_object.OOBB.Extents = { OBB_SCALE_Door_X, OBB_SCALE_Door_Y, OBB_SCALE_Door_Z };
             new_object.zoneNum = 99;
-            interaction.emplace_back(new_object);
+            interactions_.emplace_back(new_object);
         }
         for (int i = 0; i < LEVEROBJECT_NUM; ++i) {
             INTERACTION new_object;
             new_object.objectName = LEVER;
             new_object.OOBB.Extents = { OBB_SCALE_Lever_X, OBB_SCALE_Lever_Y, OBB_SCALE_Lever_Z };
             new_object.zoneNum = 99;
-            interaction.emplace_back(new_object);
+            interactions_.emplace_back(new_object);
         }
 
         INTERACTION new_object;
         new_object.objectName = MUD;
         new_object.OOBB.Extents = { 0, 0, 0 };
-        interaction.emplace_back(new_object);
+        interactions_.emplace_back(new_object);
 
         /*new_object;
         new_object.objectName = MUD;
@@ -330,36 +337,36 @@ void GameMgr::InitGame(int id[4])
             //  708.688 1029.33
 
             //상자
-        interaction[0].Pos = GetPositionToHeightMap(4915.81, 4840, 40);      //시작방
-        interaction[1].Pos = GetPositionToHeightMap(660.232, 4105.35, 40);      //마그마 미로방
-        interaction[2].Pos = GetPositionToHeightMap(860, 275, 40);              //보스방앞
-        interaction[3].Pos = GetPositionToHeightMap(3555, 2000, 40);            //중앙 방 내부 상자
-        interaction[4].Pos = GetPositionToHeightMap(1350, 1208, 40);            //중앙 방 출구후 뒤 상자
-        interaction[5].Pos = GetPositionToHeightMap(1350, 4120, 40);
+        interactions_[0].Pos = GetPositionToHeightMap(4915.81, 4840, 40);      //시작방
+        interactions_[1].Pos = GetPositionToHeightMap(660.232, 4105.35, 40);      //마그마 미로방
+        interactions_[2].Pos = GetPositionToHeightMap(860, 275, 40);              //보스방앞
+        interactions_[3].Pos = GetPositionToHeightMap(3555, 2000, 40);            //중앙 방 내부 상자
+        interactions_[4].Pos = GetPositionToHeightMap(1350, 1208, 40);            //중앙 방 출구후 뒤 상자
+        interactions_[5].Pos = GetPositionToHeightMap(1350, 4120, 40);
         //문                 
-        interaction[6].Pos = GetPositionToHeightMap(1165, 4700, 75);        //시작방
-        interaction[7].Pos = GetPositionToHeightMap(1170, 1450, 75);       //마그마방 직전
-        interaction[7].zoneNum = 2;
-        interaction[8].Pos = GetPositionToHeightMap(1165, 450, 75);      //보스방 입구
-        interaction[9].Pos = GetPositionToHeightMap(3935, 1815, 90);           //중앙방 출구
-        interaction[9].zoneNum = 1;
-        interaction[10].Pos = GetPositionToHeightMap(710, 1060, 70);                   //보스방 전전방
-        interaction[10].zoneNum = 3;
-        interaction[11].Pos = GetPositionToHeightMap(4700, 4242, 60);                   //중앙방 입구
-        interaction[11].zoneNum = 0;
+        interactions_[6].Pos = GetPositionToHeightMap(1165, 4700, 75);        //시작방
+        interactions_[7].Pos = GetPositionToHeightMap(1170, 1450, 75);       //마그마방 직전
+        interactions_[7].zoneNum = 2;
+        interactions_[8].Pos = GetPositionToHeightMap(1165, 450, 75);      //보스방 입구
+        interactions_[9].Pos = GetPositionToHeightMap(3935, 1815, 90);           //중앙방 출구
+        interactions_[9].zoneNum = 1;
+        interactions_[10].Pos = GetPositionToHeightMap(710, 1060, 70);                   //보스방 전전방
+        interactions_[10].zoneNum = 3;
+        interactions_[11].Pos = GetPositionToHeightMap(4700, 4242, 60);                   //중앙방 입구
+        interactions_[11].zoneNum = 0;
         //레버
         //interaction[11].Pos = Vector3(1630, 540, 2680);
 
-        interaction[12].Pos = Vector3(360, 1475, 4250);
+        interactions_[12].Pos = Vector3(360, 1475, 4250);
 
         Matrix4x4 world;
         Quaternion qua = Quaternion::AngleAxis(90, Vector3(0, 1, 0));
         world = Matrix4x4::Rotate(qua);
-        interaction[4].OOBB.Transform(interaction[4].OOBB, XMLoadFloat4x4(&world));
-        interaction[6].OOBB.Transform(interaction[6].OOBB, XMLoadFloat4x4(&world));
-        interaction[7].OOBB.Transform(interaction[7].OOBB, XMLoadFloat4x4(&world));
-        interaction[8].OOBB.Transform(interaction[8].OOBB, XMLoadFloat4x4(&world));
-        for (auto& p : interaction)
+        interactions_[4].OOBB.Transform(interactions_[4].OOBB, XMLoadFloat4x4(&world));
+        interactions_[6].OOBB.Transform(interactions_[6].OOBB, XMLoadFloat4x4(&world));
+        interactions_[7].OOBB.Transform(interactions_[7].OOBB, XMLoadFloat4x4(&world));
+        interactions_[8].OOBB.Transform(interactions_[8].OOBB, XMLoadFloat4x4(&world));
+        for (auto& p : interactions_)
         {
             world = Matrix4x4::identity;
             world._41 = p.Pos.x, world._42 = p.Pos.y, world._43 = p.Pos.z;
@@ -368,10 +375,10 @@ void GameMgr::InitGame(int id[4])
             p.state = none;
             p.interactEnable = false;
         }
-        interaction[4].Lookvec = Vector3(0, 0, 1);
+        interactions_[4].Lookvec = Vector3(0, 0, 1);
     }
 
-    rangeAttack.reserve(20);
+    rangeAttacks_.reserve(20);
 
     for (int i = 0; i < 20; ++i)
     {
@@ -382,10 +389,10 @@ void GameMgr::InitGame(int id[4])
         ra.OOBB.Extents = Vector3(20, 20, 20);
         ra.activeEnable = false;
 
-        rangeAttack.push_back(ra);
+        rangeAttacks_.push_back(ra);
     }
 
-    stoneAttack.reserve(10);
+    stoneAttacks_.reserve(10);
 
     for (int i = 0; i < 5; ++i)
     {
@@ -395,7 +402,7 @@ void GameMgr::InitGame(int id[4])
         ra.OOBB.Center = ra.pos;
         ra.OOBB.Extents = Vector3(50, 37, 75);
         ra.activeEnable = false;
-        stoneAttack.push_back(ra);
+        stoneAttacks_.push_back(ra);
     }
     for (int i = 0; i < 5; ++i)
     {
@@ -405,7 +412,7 @@ void GameMgr::InitGame(int id[4])
         ra.OOBB.Center = ra.pos;
         ra.OOBB.Extents = Vector3(30, 22.5, 37);
         ra.activeEnable = false;
-        stoneAttack.push_back(ra);
+        stoneAttacks_.push_back(ra);
     }
     // WALL
     {
@@ -434,7 +441,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 2, wallSize / 2, wallSize / 20));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
 
                         xPos = z * wallSize * 3 + 100;
                         zPos = x * wallSize + 200;
@@ -442,7 +449,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 20, wallSize / 2, wallSize / 2));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
                     }
 
                     if (z == zObjects - 1)
@@ -453,7 +460,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 2, wallSize / 2, wallSize / 20));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
 
 
                         xPos = 5045.f;
@@ -462,7 +469,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 20, wallSize / 2, wallSize / 2));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
                     }
 
                     if ((x != 1 && x != 5 && x != xObjects - 2) || y != 0)
@@ -473,7 +480,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 20, wallSize / 2, wallSize / 2));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
                     }
 
                     if ((x != 15 || y != 0))
@@ -486,7 +493,7 @@ void GameMgr::InitGame(int id[4])
                             st.center = (XMFLOAT3(xPos, yPos, zPos));
                             st.extend = (XMFLOAT3(wallSize / 2, wallSize / 2, wallSize / 20));
                             st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                            structure.push_back(st);
+                            structures_.push_back(st);
                         }
                     }
 
@@ -498,7 +505,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 2, wallSize / 2, wallSize / 20));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
                     }
                     if (x != 2 || y != 0)
                     {
@@ -508,7 +515,7 @@ void GameMgr::InitGame(int id[4])
                         st.center = (XMFLOAT3(xPos, yPos, zPos));
                         st.extend = (XMFLOAT3(wallSize / 2, wallSize / 2, wallSize / 20));
                         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-                        structure.push_back(st);
+                        structures_.push_back(st);
                     }
                 }
             }
@@ -529,7 +536,7 @@ void GameMgr::InitGame(int id[4])
         st.center = (XMFLOAT3(xPos, yPos, zPos));
         st.extend = (XMFLOAT3(80, 400, 990));
         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-        structure.push_back(st);
+        structures_.push_back(st);
 
         //계단 난간
 
@@ -539,7 +546,7 @@ void GameMgr::InitGame(int id[4])
         st.center = (XMFLOAT3(xPos, yPos, zPos));
         st.extend = (XMFLOAT3(270, 300, 40));
         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-        structure.push_back(st);
+        structures_.push_back(st);
 
     }
 
@@ -557,7 +564,7 @@ void GameMgr::InitGame(int id[4])
         st.center = (XMFLOAT3(xPos, yPos, zPos));
         st.extend = (XMFLOAT3(40, 110, 1020));
         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-        structure.push_back(st);
+        structures_.push_back(st);
     }
 
     //시작방 난간
@@ -574,7 +581,7 @@ void GameMgr::InitGame(int id[4])
         st.center = (XMFLOAT3(xPos, yPos, zPos));
         st.extend = (XMFLOAT3(40, 100, 120));
         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-        structure.push_back(st);
+        structures_.push_back(st);
 
         //입구에서 출구바라보고 계단오른쪽난간
         xPos = 4276.01;
@@ -583,7 +590,7 @@ void GameMgr::InitGame(int id[4])
         st.center = (XMFLOAT3(xPos, yPos, zPos));
         st.extend = (XMFLOAT3(40, 100, 120));
         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-        structure.push_back(st);
+        structures_.push_back(st);
     }
 
     //중앙방 출구 후 방 계단난간
@@ -595,30 +602,30 @@ void GameMgr::InitGame(int id[4])
         st.center = (XMFLOAT3(3550, 1050, 1564));
         st.extend = (XMFLOAT3(40, 100, 200));
         st.OOBB = BoundingOrientedBox(st.center, st.extend, XMFLOAT4(0, 0, 0, 1));
-        structure.push_back(st);
+        structures_.push_back(st);
     }
 
     BoundingOrientedBox LAVA;
     LAVA.Center = { 665.265, 1260, 3328.36 };
     LAVA.Extents = { 800, 1.f, 800 };
-    map_lava.emplace_back(LAVA);
+    lavaZones_.emplace_back(LAVA);
 
     ZONE zone;
     zone.isClear = false;
     //시작방
     zone.monsterID = { 3,4,10,11 };
-    gameZones.push_back(zone);
+    zones_.push_back(zone);
     //중앙방
     zone.monsterID = { 0,1,5,6,7,12,13,14 };
-    gameZones.push_back(zone);
+    zones_.push_back(zone);
     zone.monsterID = { 2, 15, 16 };
-    gameZones.push_back(zone);
+    zones_.push_back(zone);
     //안개방?
     zone.monsterID = { 8 };
-    gameZones.push_back(zone);
+    zones_.push_back(zone);
     //보스방
     zone.monsterID = { 9 };
-    gameZones.push_back(zone);
+    zones_.push_back(zone);
 
     isRunning = true;
 }
@@ -628,17 +635,17 @@ void GameMgr::InitGame(int id[4])
 void GameMgr::Update()
 {
     for (int n_id = 0; n_id < MAX_OBJECT; ++n_id) {
-        switch (npc[n_id].state)
+        switch (npc_[n_id].state)
         {
         case none:
             for (auto& p : arr_player)
             {
-                if (find(gameZones.at(zoneLevel).monsterID.begin(), gameZones.at(zoneLevel).monsterID.end(), n_id) == gameZones.at(zoneLevel).monsterID.end()) continue;
+                if (find(zones_.at(currentZoneLevel_).monsterID.begin(), zones_.at(currentZoneLevel_).monsterID.end(), n_id) == zones_.at(currentZoneLevel_).monsterID.end()) continue;
                 if (p.ps.hp <= 0) continue;
-                if (Vector3::Distance(npc[n_id].CurPos, p.CurPos) < npc[n_id].sight)
+                if (Vector3::Distance(npc_[n_id].CurPos, p.CurPos) < npc_[n_id].sight)
                 {
-                    npc[n_id].destPl = p.id;
-                    npc[n_id].state = hit;
+                    npc_[n_id].destPl = p.id;
+                    npc_[n_id].state = hit;
                 }
             }
             break;
@@ -652,11 +659,11 @@ void GameMgr::Update()
 
         case dead:
         {
-            if (chrono::system_clock::now() - npc[n_id].timeDeath > chrono::milliseconds(2000)) {
-                npc[n_id].CurPos.x = -1000.f;
-            npc[n_id].CurPos.z = -1000.f;
-            npc[n_id].PrevPos.x = -1000.f;
-            npc[n_id].PrevPos.z = -1000.f;
+            if (chrono::system_clock::now() - npc_[n_id].timeDeath > chrono::milliseconds(2000)) {
+                npc_[n_id].CurPos.x = -1000.f;
+            npc_[n_id].CurPos.z = -1000.f;
+            npc_[n_id].PrevPos.x = -1000.f;
+            npc_[n_id].PrevPos.z = -1000.f;
             }
             break;
         }
@@ -665,16 +672,16 @@ void GameMgr::Update()
         }
 
         //gravity
-        if (npc[n_id].CurPos.y > mapData->GetHeight(npc[n_id].CurPos.x, npc[n_id].CurPos.z)* mapData->GetScale().y + 80)
-            npc[n_id].CurPos.y -= 5;
+        if (npc_[n_id].CurPos.y > mapData->GetHeight(npc_[n_id].CurPos.x, npc_[n_id].CurPos.z)* mapData->GetScale().y + 80)
+            npc_[n_id].CurPos.y -= 5;
         else
-            npc[n_id].CurPos.y = mapData->GetHeight(npc[n_id].CurPos.x, npc[n_id].CurPos.z) * mapData->GetScale().y + 80;
+            npc_[n_id].CurPos.y = mapData->GetHeight(npc_[n_id].CurPos.x, npc_[n_id].CurPos.z) * mapData->GetScale().y + 80;
 
 
-        if (npc[n_id].CurPos != npc[n_id].PrevPos) {
-            Vector3 Lookvec = npc[n_id].CurPos - npc[n_id].PrevPos;
+        if (npc_[n_id].CurPos != npc_[n_id].PrevPos) {
+            Vector3 Lookvec = npc_[n_id].CurPos - npc_[n_id].PrevPos;
             Lookvec.y = 0.f;
-            npc[n_id].Lookvec = Lookvec.normalized();
+            npc_[n_id].Lookvec = Lookvec.normalized();
         }
 
         XMFLOAT4X4 danwi
@@ -682,36 +689,36 @@ void GameMgr::Update()
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
-            npc[n_id].CurPos.x, npc[n_id].CurPos.y, npc[n_id].CurPos.z, 1
+            npc_[n_id].CurPos.x, npc_[n_id].CurPos.y, npc_[n_id].CurPos.z, 1
         );
 
 
-        npc[n_id].OOBB.Transform(npc[n_id].OOBB, DirectX::XMLoadFloat4x4(&danwi));
+        npc_[n_id].OOBB.Transform(npc_[n_id].OOBB, DirectX::XMLoadFloat4x4(&danwi));
 
-        switch (npc[n_id].mob)
+        switch (npc_[n_id].mob)
         {
         case MAGMA:
-            npc[n_id].OOBB.Extents = { OBB_SCALE_Magmaa_X, OBB_SCALE_Magmaa_Y, OBB_SCALE_Magmaa_Z };
+            npc_[n_id].OOBB.Extents = { OBB_SCALE_Magmaa_X, OBB_SCALE_Magmaa_Y, OBB_SCALE_Magmaa_Z };
             break;
         case GOLEM:
-            npc[n_id].OOBB.Extents = { OBB_SCALE_Golem_X, OBB_SCALE_Golem_Y, OBB_SCALE_Golem_Z };
+            npc_[n_id].OOBB.Extents = { OBB_SCALE_Golem_X, OBB_SCALE_Golem_Y, OBB_SCALE_Golem_Z };
             break;
         case OGRE:
-            npc[n_id].OOBB.Extents = { OBB_SCALE_Orge_X, OBB_SCALE_Orge_Y, OBB_SCALE_Orge_Z };
+            npc_[n_id].OOBB.Extents = { OBB_SCALE_Orge_X, OBB_SCALE_Orge_Y, OBB_SCALE_Orge_Z };
             break;
         }
 
         // init lookvec
-        if (npc[n_id].Lookvec.x == 0.f && npc[n_id].Lookvec.y == 0.f && npc[n_id].Lookvec.z == 0.f)
-            npc[n_id].Lookvec = { 1, 0, 0 };
+        if (npc_[n_id].Lookvec.x == 0.f && npc_[n_id].Lookvec.y == 0.f && npc_[n_id].Lookvec.z == 0.f)
+            npc_[n_id].Lookvec = { 1, 0, 0 };
 
 
-        NPC_CollCheck(n_id);
+        CheckNPCCollision(n_id);
 
-        npc[n_id].PrevPos = npc[n_id].CurPos;
+        npc_[n_id].PrevPos = npc_[n_id].CurPos;
     }
 
-    for (auto& ra : rangeAttack)
+    for (auto& ra : rangeAttacks_)
     {
         if (!ra.activeEnable) continue;
         ra.pos = ra.pos + ra.look * ra.speed;
@@ -733,7 +740,7 @@ void GameMgr::Update()
                 break;
             }
         }
-        for (auto& p : structure)
+        for (auto& p : structures_)
         {
             if (ra.OOBB.Intersects(p.OOBB))
             {
@@ -746,9 +753,9 @@ void GameMgr::Update()
         }
            
     }
-    if (zoneLevel == 4 && chrono::system_clock::now() - stoneTime > chrono::milliseconds(500))
+    if (currentZoneLevel_ == 4 && chrono::system_clock::now() - lastStoneAttackTime_ > chrono::milliseconds(500))
     {
-        for (auto& st : stoneAttack)
+        for (auto& st : stoneAttacks_)
         {
             if (!st.activeEnable)
             {
@@ -759,10 +766,10 @@ void GameMgr::Update()
                 break;
             }
         }
-        stoneTime = chrono::system_clock::now();
+        lastStoneAttackTime_ = chrono::system_clock::now();
     }
 
-    for (auto& st : stoneAttack)
+    for (auto& st : stoneAttacks_)
     {
         if (!st.activeEnable) continue;
         st.pos.y -= st.speed;
@@ -784,53 +791,53 @@ void GameMgr::Update()
         }
     }
 
-    if (isSlow && chrono::system_clock::now() - slowTime > chrono::seconds(20))
-        isSlow = false;
+    if (isSlowed_ && chrono::system_clock::now() - slowEffectEndTime > chrono::seconds(20))
+        isSlowed_ = false;
 
-    if (npc[9].state == dead && chrono::system_clock::now() - npc[9].timeDeath > chrono::seconds(4))
+    if (npc_[9].state == dead && chrono::system_clock::now() - npc_[9].timeDeath > chrono::seconds(4))
     {
         if (isEnding == false) {
             isEnding = true;
-            e_time = chrono::system_clock::now();
+            endTime = chrono::system_clock::now();
         }
     }
 
-    cur_update_time = chrono::system_clock::now();
+    currentUpdateTime = chrono::system_clock::now();
 }
 
 
 void GameMgr::TracePlayer(int n_id)
 {
-    int p_id = npc[n_id].destPl;
+    int p_id = npc_[n_id].destPl;
     if (arr_player[p_id].ps.hp <= 0)
     {
-        npc[n_id].state = none;
+        npc_[n_id].state = none;
         return;
     }
     Vector3 player_pos = arr_player[p_id].CurPos;
     player_pos.y -= 20;
-    float dis = Vector3::Distance(npc[n_id].CurPos, player_pos);
-    float speed = npc[n_id].speed;
-    if (isSlow) speed *= 0.5;
+    float dis = Vector3::Distance(npc_[n_id].CurPos, player_pos);
+    float speed = npc_[n_id].speed;
+    if (isSlowed_) speed *= 0.5;
 
-    if (npc[n_id].attackRange < dis)    
-        npc[n_id].CurPos = Vector3::MoveTowards(npc[n_id].CurPos, player_pos, speed);
+    if (npc_[n_id].attackRange < dis)    
+        npc_[n_id].CurPos = Vector3::MoveTowards(npc_[n_id].CurPos, player_pos, speed);
     else
     {
-        npc[n_id].state = attack;
-        npc[n_id].isAttack = true;
-        npc[n_id].timeLastAttack = chrono::system_clock::now();
+        npc_[n_id].state = attack;
+        npc_[n_id].isAttack = true;
+        npc_[n_id].timeLastAttack = chrono::system_clock::now();
     }
 }
 
 
 void GameMgr::AttackPlayer(int n_id)
 {
-    int p_id = npc[n_id].destPl;
+    int p_id = npc_[n_id].destPl;
 
-    if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc[n_id].timeLastAttack > chrono::milliseconds(npc[n_id].coolTime) && npc[n_id].isAttack)
+    if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc_[n_id].timeLastAttack > chrono::milliseconds(npc_[n_id].coolTime) && npc_[n_id].isAttack)
     {
-        if (npc[n_id].mob == OGRE)
+        if (npc_[n_id].mob == OGRE)
         {
             if (arr_player[p_id].ps.block < Mathf::RandF(0, 100))
             {
@@ -839,18 +846,18 @@ void GameMgr::AttackPlayer(int n_id)
                 arr_player[p_id].m_slock.unlock(); 
             }
         }
-        else if(npc[n_id].mob == MAGMA)
+        else if(npc_[n_id].mob == MAGMA)
         {
-            for (auto& p : rangeAttack)
+            for (auto& p : rangeAttacks_)
             {
                 Matrix4x4 world = Matrix4x4::identity;
                 if (!p.activeEnable)
                 {
-                    p.pos = npc[n_id].CurPos + npc[n_id].Lookvec * 30;
+                    p.pos = npc_[n_id].CurPos + npc_[n_id].Lookvec * 30;
                     world._41 = p.pos.x; world._42 = p.pos.y; world._43 = p.pos.z;
                     p.OOBB.Transform(p.OOBB, XMLoadFloat4x4(&world));
                     p.speed = 25;
-                    p.look =  (arr_player[p_id].CurPos- npc[n_id].CurPos).normalized();
+                    p.look =  (arr_player[p_id].CurPos- npc_[n_id].CurPos).normalized();
                     p.activeEnable = true;
                     p.liveTime = chrono::system_clock::now();
                     break;
@@ -861,8 +868,8 @@ void GameMgr::AttackPlayer(int n_id)
         {      
             for (auto& p : arr_player)
             {
-                if (npc[n_id].CurPos.x - 400 < p.CurPos.x && npc[n_id].CurPos.x + 400 > p.CurPos.x
-                    && npc[n_id].CurPos.z - 400 < p.CurPos.z && npc[n_id].CurPos.z + 400 > p.CurPos.z)
+                if (npc_[n_id].CurPos.x - 400 < p.CurPos.x && npc_[n_id].CurPos.x + 400 > p.CurPos.x
+                    && npc_[n_id].CurPos.z - 400 < p.CurPos.z && npc_[n_id].CurPos.z + 400 > p.CurPos.z)
                 {
                     if (p.ps.block < Mathf::RandF(0, 100))
                     {
@@ -873,21 +880,21 @@ void GameMgr::AttackPlayer(int n_id)
                 }
             }
         }
-        npc[n_id].attackPacketEnable = true;
-        npc[n_id].isAttack = false;
+        npc_[n_id].attackPacketEnable = true;
+        npc_[n_id].isAttack = false;
     } 
-    if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc[n_id].timeLastAttack > chrono::milliseconds(npc[n_id].coolTime + 200))
+    if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc_[n_id].timeLastAttack > chrono::milliseconds(npc_[n_id].coolTime + 200))
     {
-        npc[n_id].attackPacketEnable = false;
+        npc_[n_id].attackPacketEnable = false;
     }
-    if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc[n_id].timeLastAttack > chrono::milliseconds(2500))
+    if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc_[n_id].timeLastAttack > chrono::milliseconds(2500))
     {
-        npc[n_id].state = hit;
+        npc_[n_id].state = hit;
     }
     if (arr_player[p_id].ps.hp <= 0)
     {
-        npc[n_id].state = none;
-        npc[n_id].attackPacketEnable = false;
+        npc_[n_id].state = none;
+        npc_[n_id].attackPacketEnable = false;
     }
 }
 
@@ -939,11 +946,11 @@ void GameMgr::CheckPlayerDead(int p_id)
     }
 }
 
-void GameMgr::keyInput(cs_ingame_packet cspacket)
+void GameMgr::ProcessKeyInput(cs_ingame_packet cspacket)
 {
 }
 
-void GameMgr::process_packet(int p_id, unsigned char* p_buf)
+void GameMgr::ProcessPacket(int p_id, unsigned char* p_buf)
 {
     cs_ingame_packet* cspacket = reinterpret_cast<cs_ingame_packet*>(p_buf);
 
@@ -985,20 +992,20 @@ void GameMgr::process_packet(int p_id, unsigned char* p_buf)
                 }
                 else if (arr_player[p_id].activeItem == ITEM_MONSTER_SLOW)
                 {
-                    isSlow = true;  
-                    slowTime = chrono::system_clock::now();
+                    isSlowed_ = true;  
+                    slowEffectEndTime = chrono::system_clock::now();
                 }
                 arr_player[p_id].activeItem = ITEM_EMPTY;
             }
             if (cspacket->input.Key_B == true) {
                 arr_player[p_id].CurPos = Vector3(487, 0, 589);
                 arr_player[p_id].CurPos.y = mapData->GetHeight(arr_player[p_id].CurPos.x, arr_player[p_id].CurPos.z) * mapData->GetScale().y + 100;
-                zoneLevel = 4;
+                currentZoneLevel_ = 4;
             }
             if (cspacket->input.Key_N == true) {
                 arr_player[p_id].CurPos = Vector3(557.519, 0, 1202.554);
                 arr_player[p_id].CurPos.y = mapData->GetHeight(arr_player[p_id].CurPos.x, arr_player[p_id].CurPos.z) * mapData->GetScale().y + 100;
-                zoneLevel = 3;
+                currentZoneLevel_ = 3;
             }
             if (cspacket->input.Key_M == true) {
                 arr_player[p_id].ps.attackDamage = 500;
@@ -1021,11 +1028,11 @@ void GameMgr::process_packet(int p_id, unsigned char* p_buf)
         {
             int chestid = cspacket->item.chestId;
             int itemid = cspacket->item.itemId;
-            if(!interaction[chestid].item.at(itemid).getEnable)
+            if(!interactions_[chestid].item.at(itemid).getEnable)
             { 
-                arr_player[p_id].pl_items.find(interaction[chestid].item.at(itemid).item)->second += 1;
-                interaction[chestid].item.at(itemid).getEnable = true;
-                SetItem(p_id, interaction[chestid].item.at(itemid).item);
+                arr_player[p_id].pl_items.find(interactions_[chestid].item.at(itemid).item)->second += 1;
+                interactions_[chestid].item.at(itemid).getEnable = true;
+                SetItem(p_id, interactions_[chestid].item.at(itemid).item);
             }
         }
 
@@ -1076,17 +1083,17 @@ void GameMgr::process_packet(int p_id, unsigned char* p_buf)
     arr_player[p_id].OOBB.Extents.y = OBB_SCALE_PLAYER_Y;
     arr_player[p_id].OOBB.Extents.z = OBB_SCALE_PLAYER_Z;
 
-    Player_CollCheck(p_id);
+    CheckPlayerCollision(p_id);
     CheckPlayerDead(p_id);
 
     arr_player[p_id].PrevPos = arr_player[p_id].CurPos;
 }
 
 
-void GameMgr::Player_CollCheck(int id)
+void GameMgr::CheckPlayerCollision(int id)
 {
-    for (int i = 0; i < structure.size(); ++i) {
-        ContainmentType containType = arr_player[id].OOBB.Contains(structure[i].OOBB);
+    for (int i = 0; i < structures_.size(); ++i) {
+        ContainmentType containType = arr_player[id].OOBB.Contains(structures_[i].OOBB);
 
         switch (containType)
         {
@@ -1104,7 +1111,7 @@ void GameMgr::Player_CollCheck(int id)
         }
     }
 
-    for (auto& p : interaction)
+    for (auto& p : interactions_)
     {
         if (p.objectName == DOOR && p.interactEnable == true) continue;
         ContainmentType containType = arr_player[id].OOBB.Contains(p.OOBB);
@@ -1123,9 +1130,9 @@ void GameMgr::Player_CollCheck(int id)
         }
     }
 
-    for (int i = 0; i < map_lava.size(); ++i)
+    for (int i = 0; i < lavaZones_.size(); ++i)
     {
-        ContainmentType containType = map_lava[i].Contains(arr_player[id].OOBB);
+        ContainmentType containType = lavaZones_[i].Contains(arr_player[id].OOBB);
 
         switch (containType)
         {
@@ -1149,11 +1156,11 @@ void GameMgr::Player_CollCheck(int id)
 
 }
 
-void GameMgr::NPC_CollCheck(int id)
+void GameMgr::CheckNPCCollision(int id)
 
 {
-    for (int i = 0; i < structure.size(); ++i) {
-        ContainmentType containType = npc[id].OOBB.Contains(structure[i].OOBB);
+    for (int i = 0; i < structures_.size(); ++i) {
+        ContainmentType containType = npc_[id].OOBB.Contains(structures_[i].OOBB);
 
         switch (containType)
         {
@@ -1162,17 +1169,17 @@ void GameMgr::NPC_CollCheck(int id)
         case INTERSECTS:
         {
    /*         npc[id].state = none;*/
-            npc[id].CurPos = npc[id].PrevPos;
-            Vector3 lookvec = npc[id].InitPos - npc[id].CurPos;
-            npc[id].Lookvec = lookvec.normalized();
+            npc_[id].CurPos = npc_[id].PrevPos;
+            Vector3 lookvec = npc_[id].InitPos - npc_[id].CurPos;
+            npc_[id].Lookvec = lookvec.normalized();
             break;
         }
         case CONTAINS:
         {
             //npc[id].state = none;
-            npc[id].CurPos = npc[id].PrevPos;
-            Vector3 lookvec = npc[id].InitPos - npc[id].CurPos;
-            npc[id].Lookvec = lookvec.normalized();
+            npc_[id].CurPos = npc_[id].PrevPos;
+            Vector3 lookvec = npc_[id].InitPos - npc_[id].CurPos;
+            npc_[id].Lookvec = lookvec.normalized();
             break;
         }
         default:
@@ -1204,7 +1211,7 @@ void GameMgr::PickInteractionObject(int p_id)
 
     for (int i = 0; i < MAX_INTRACTION; ++i) // monster check
     {
-        isIntersected = CollideObjectByRayIntersection(interaction[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
+        isIntersected = CollideObjectByRayIntersection(interactions_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
@@ -1214,19 +1221,19 @@ void GameMgr::PickInteractionObject(int p_id)
     }
     if (object_type == type_static)
     {
-        if (interaction[object_id].interactEnable == false)
+        if (interactions_[object_id].interactEnable == false)
         {
             bool isOpen = true;
-            if (interaction[object_id].zoneNum != 99)
+            if (interactions_[object_id].zoneNum != 99)
             {
-                for (auto p : gameZones.at(interaction[object_id].zoneNum).monsterID)
+                for (auto p : zones_.at(interactions_[object_id].zoneNum).monsterID)
                 {
-                    if (npc[p].hp > 0) isOpen = false;
+                    if (npc_[p].hp > 0) isOpen = false;
                 }
-                if (interaction[object_id].zoneNum == 3 && !interaction[12].interactEnable) isOpen = false;
-                if (isOpen) zoneLevel = ++interaction[object_id].zoneNum;
+                if (interactions_[object_id].zoneNum == 3 && !interactions_[12].interactEnable) isOpen = false;
+                if (isOpen) currentZoneLevel_ = ++interactions_[object_id].zoneNum;
             }
-            interaction[object_id].interactEnable = isOpen;
+            interactions_[object_id].interactEnable = isOpen;
         }
     }
 }
@@ -1246,8 +1253,8 @@ void GameMgr::FindCollideObject(int p_id)
     Matrix4x4		matColidePosition = Matrix4x4::identity; // identity: 4x4 danwi
     for (int i = 0; i < MAX_OBJECT; ++i) // monster check
     {
-        if (npc[i].hp <= 0) continue;
-        isIntersected = CollideObjectByRayIntersection(npc[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
+        if (npc_[i].hp <= 0) continue;
+        isIntersected = CollideObjectByRayIntersection(npc_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
@@ -1258,8 +1265,8 @@ void GameMgr::FindCollideObject(int p_id)
 
     for (int i = 0; i < MAX_INTRACTION; ++i) // monster check
     {
-        if (interaction[i].objectName == DOOR && interaction[i].interactEnable == true) continue;
-        isIntersected = CollideObjectByRayIntersection(interaction[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
+        if (interactions_[i].objectName == DOOR && interactions_[i].interactEnable == true) continue;
+        isIntersected = CollideObjectByRayIntersection(interactions_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
@@ -1268,10 +1275,10 @@ void GameMgr::FindCollideObject(int p_id)
         }
     }
 
-    for (int i = 0; i < structure.size(); ++i)
+    for (int i = 0; i < structures_.size(); ++i)
     {
-        if (structure[i].type == fence) continue;
-        isIntersected = CollideObjectByRayIntersection(structure[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
+        if (structures_[i].type == fence) continue;
+        isIntersected = CollideObjectByRayIntersection(structures_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
@@ -1302,50 +1309,50 @@ void GameMgr::FindCollideObject(int p_id)
         arr_player[p_id].bullet[0].in_use = false;
         break;
     case type_npc:
-        if (npc[object_id].state != dead)
+        if (npc_[object_id].state != dead)
         {
             arr_player[p_id].bullet[0].type = type_npc;
-            for (int p : gameZones.at(npc[object_id].zoneNum).monsterID)
+            for (int p : zones_.at(npc_[object_id].zoneNum).monsterID)
             {
-                if (npc[p].state != none) continue;
-                npc[p].destPl = p_id;
-                npc[p].state = hit;
+                if (npc_[p].state != none) continue;
+                npc_[p].destPl = p_id;
+                npc_[p].state = hit;
             }
-            if (npc[object_id].destPl != p_id)
+            if (npc_[object_id].destPl != p_id)
             {
-                if (Vector3::Distance(npc[object_id].CurPos, arr_player[p_id].CurPos) < Vector3::Distance(npc[object_id].CurPos, arr_player[npc[object_id].destPl].CurPos))
+                if (Vector3::Distance(npc_[object_id].CurPos, arr_player[p_id].CurPos) < Vector3::Distance(npc_[object_id].CurPos, arr_player[npc_[object_id].destPl].CurPos))
                 {
-                    npc[object_id].destPl = p_id;
-                    npc[object_id].state = hit;
+                    npc_[object_id].destPl = p_id;
+                    npc_[object_id].state = hit;
                 }
             }
 
-            if (0 < npc[object_id].hp)
+            if (0 < npc_[object_id].hp)
             {
                 //몬스터 즉사 아이템 처리
-                if (arr_player[p_id].ps.instantDeath > npc[object_id].hp && npc[object_id].mob != GOLEM)
-                    npc[object_id].hp = 0;
+                if (arr_player[p_id].ps.instantDeath > npc_[object_id].hp && npc_[object_id].mob != GOLEM)
+                    npc_[object_id].hp = 0;
                 else
                 {
                     float damage = arr_player[p_id].ps.attackDamage;
                     //보스 데미지 증가 아이템처리
-                    if (npc[object_id].mob == GOLEM)
+                    if (npc_[object_id].mob == GOLEM)
                         damage = damage + damage * arr_player[p_id].ps.bossDamage * 0.01;
-                    npc[object_id].hp -= damage;
-                    npc[object_id].hp = Mathf::Max(npc[object_id].hp, 0);
+                    npc_[object_id].hp -= damage;
+                    npc_[object_id].hp = Mathf::Max(npc_[object_id].hp, 0);
                 }
 
-                if (npc[object_id].hp == 0)
+                if (npc_[object_id].hp == 0)
                 {
                     arr_player[p_id].ps.hp = Mathf::Min(arr_player[p_id].ps.hp + arr_player[p_id].ps.killMaxHp, arr_player[p_id].ps.maxhp);
-                    npc[object_id].state = dead;
-                    npc[object_id].timeDeath = chrono::system_clock::now();
+                    npc_[object_id].state = dead;
+                    npc_[object_id].timeDeath = chrono::system_clock::now();
                 }
             }
             else
             {
-                npc[object_id].state = dead;
-                npc[object_id].timeDeath = chrono::system_clock::now();
+                npc_[object_id].state = dead;
+                npc_[object_id].timeDeath = chrono::system_clock::now();
             }
         }
         break;
@@ -1382,8 +1389,8 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
         Matrix4x4		matColidePosition = Matrix4x4::identity; // identity: 4x4 danwi
         for (int i = 0; i < MAX_OBJECT; ++i) // monster check
         {
-            if (npc[i].hp <= 0) continue;
-            isIntersected = CollideObjectByRayIntersection(npc[i].OOBB, camera_pos, camera_look, &fHitDistance);
+            if (npc_[i].hp <= 0) continue;
+            isIntersected = CollideObjectByRayIntersection(npc_[i].OOBB, camera_pos, camera_look, &fHitDistance);
             if (isIntersected && (fHitDistance < fNearestHitDistance))
             {
                 fNearestHitDistance = fHitDistance;
@@ -1394,8 +1401,8 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
 
         for (int i = 0; i < MAX_INTRACTION; ++i) // monster check
         {
-            if (interaction[i].objectName == DOOR && interaction[i].interactEnable == true) continue;
-            isIntersected = CollideObjectByRayIntersection(interaction[i].OOBB, camera_pos, camera_look, &fHitDistance);
+            if (interactions_[i].objectName == DOOR && interactions_[i].interactEnable == true) continue;
+            isIntersected = CollideObjectByRayIntersection(interactions_[i].OOBB, camera_pos, camera_look, &fHitDistance);
             if (isIntersected && (fHitDistance < fNearestHitDistance))
             {
                 fNearestHitDistance = fHitDistance;
@@ -1404,10 +1411,10 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
             }
         }
 
-        for (int i = 0; i < structure.size(); ++i)
+        for (int i = 0; i < structures_.size(); ++i)
         {
-            if (structure[i].type == fence) continue;
-            isIntersected = CollideObjectByRayIntersection(structure[i].OOBB, camera_pos, camera_look, &fHitDistance);
+            if (structures_[i].type == fence) continue;
+            isIntersected = CollideObjectByRayIntersection(structures_[i].OOBB, camera_pos, camera_look, &fHitDistance);
             if (isIntersected && (fHitDistance < fNearestHitDistance))
             {
                 fNearestHitDistance = fHitDistance;
@@ -1438,50 +1445,50 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
             arr_player[p_id].bullet[j].in_use = false;
             break;
         case type_npc:
-            if (npc[object_id].state != dead)
+            if (npc_[object_id].state != dead)
             {
                 arr_player[p_id].bullet[j].type = type_npc;
-                for (int p : gameZones.at(npc[object_id].zoneNum).monsterID)
+                for (int p : zones_.at(npc_[object_id].zoneNum).monsterID)
                 {
-                    if (npc[p].state != none) continue;
-                    npc[p].destPl = p_id;
-                    npc[p].state = hit;
+                    if (npc_[p].state != none) continue;
+                    npc_[p].destPl = p_id;
+                    npc_[p].state = hit;
                 }
-                if (npc[object_id].destPl != p_id)
+                if (npc_[object_id].destPl != p_id)
                 {
-                    if (Vector3::Distance(npc[object_id].CurPos, arr_player[p_id].CurPos) < Vector3::Distance(npc[object_id].CurPos, arr_player[npc[object_id].destPl].CurPos))
+                    if (Vector3::Distance(npc_[object_id].CurPos, arr_player[p_id].CurPos) < Vector3::Distance(npc_[object_id].CurPos, arr_player[npc_[object_id].destPl].CurPos))
                     {
-                        npc[object_id].destPl = p_id;
-                        npc[object_id].state = hit;
+                        npc_[object_id].destPl = p_id;
+                        npc_[object_id].state = hit;
                     }
                 }
 
-                if (0 < npc[object_id].hp)
+                if (0 < npc_[object_id].hp)
                 {
                     //몬스터 즉사 아이템 처리
-                    if (arr_player[p_id].ps.instantDeath > npc[object_id].hp&& npc[object_id].mob != GOLEM)
-                        npc[object_id].hp = 0;
+                    if (arr_player[p_id].ps.instantDeath > npc_[object_id].hp&& npc_[object_id].mob != GOLEM)
+                        npc_[object_id].hp = 0;
                     else
                     {
                         float damage = arr_player[p_id].ps.attackDamage;
                         //보스 데미지 증가 아이템처리
-                        if (npc[object_id].mob == GOLEM)
+                        if (npc_[object_id].mob == GOLEM)
                             damage = damage + damage * arr_player[p_id].ps.bossDamage * 0.01;
-                        npc[object_id].hp -= damage;
-                        npc[object_id].hp = Mathf::Max(npc[object_id].hp, 0);
+                        npc_[object_id].hp -= damage;
+                        npc_[object_id].hp = Mathf::Max(npc_[object_id].hp, 0);
                     }
 
-                    if (npc[object_id].hp == 0)
+                    if (npc_[object_id].hp == 0)
                     {
                         arr_player[p_id].ps.hp = Mathf::Min(arr_player[p_id].ps.hp + arr_player[p_id].ps.killMaxHp, arr_player[p_id].ps.maxhp);
-                        npc[object_id].state = dead;
-                        npc[object_id].timeDeath = chrono::system_clock::now();
+                        npc_[object_id].state = dead;
+                        npc_[object_id].timeDeath = chrono::system_clock::now();
                     }
                 }
                 else
                 {
-                    npc[object_id].state = dead;
-                    npc[object_id].timeDeath = chrono::system_clock::now();
+                    npc_[object_id].state = dead;
+                    npc_[object_id].timeDeath = chrono::system_clock::now();
                 }
             }
             break;
@@ -1567,7 +1574,7 @@ sc_ingame_packet GameMgr::GetPacket(sc_ingame_packet packet)
     sc_ingame_packet scpacket;
     if (isEnding) {
         scpacket.type = SC_GAME_TO_ENDING_PACKET;
-        chrono::duration<int> t = chrono::duration_cast<chrono::seconds> (e_time - s_time);
+        chrono::duration<int> t = chrono::duration_cast<chrono::seconds> (endTime - startTime);
         scpacket.play_time = t.count();
     }
     else
@@ -1579,14 +1586,14 @@ sc_ingame_packet GameMgr::GetPacket(sc_ingame_packet packet)
 
     for (int i = 0; i < MAX_PLAYER; ++i)
     {
-        int id = pl_list[i];
+        int id = playerIds[i];
 
         scpacket.player[i].pos = arr_player[id].CurPos;
         scpacket.player[i].look = arr_player[id].pl_look;
         scpacket.player[i].cameraLook = arr_player[id].cam_look;
         scpacket.player[i].state = arr_player[id].state;
         scpacket.player[i].id = i;
-        scpacket.player[i].zoneNum = zoneLevel;
+        scpacket.player[i].zoneNum = currentZoneLevel_;
         scpacket.player[i].ps.hp = arr_player[id].ps.hp;
         scpacket.player[i].ps.maxHp = arr_player[id].ps.maxhp;
         scpacket.player[i].ps.attackSpeed = arr_player[id].ps.attackSpeed;
@@ -1600,43 +1607,72 @@ sc_ingame_packet GameMgr::GetPacket(sc_ingame_packet packet)
     for (int i = 0; i < MAX_OBJECT; ++i) // 오류 발생
     {
         scpacket.npc[i].id = i;
-        scpacket.npc[i].pos = npc[i].CurPos;
-        scpacket.npc[i].look = npc[i].Lookvec;
-        scpacket.npc[i].hp = npc[i].hp;
-        scpacket.npc[i].attackEnable = npc[i].attackPacketEnable;
-        scpacket.npc[i].state = npc[i].state;
+        scpacket.npc[i].pos = npc_[i].CurPos;
+        scpacket.npc[i].look = npc_[i].Lookvec;
+        scpacket.npc[i].hp = npc_[i].hp;
+        scpacket.npc[i].attackEnable = npc_[i].attackPacketEnable;
+        scpacket.npc[i].state = npc_[i].state;
     }
 
     for (int i = 0; i < MAX_INTRACTION; ++i)
     {
-        scpacket.interaction[i].pos = interaction[i].Pos;
-        scpacket.interaction[i].look = interaction[i].Lookvec;
-        if (interaction[i].item.size() != 0)
+        scpacket.interaction[i].pos = interactions_[i].Pos;
+        scpacket.interaction[i].look = interactions_[i].Lookvec;
+        if (interactions_[i].item.size() != 0)
         {
-            scpacket.interaction[i].item[0].itemType = interaction[i].item.at(0).item;
-            scpacket.interaction[i].item[0].isAlive = !interaction[i].item.at(0).getEnable;
-            scpacket.interaction[i].item[1].itemType = interaction[i].item.at(1).item;
-            scpacket.interaction[i].item[1].isAlive = !interaction[i].item.at(1).getEnable;
-            scpacket.interaction[i].item[2].itemType = interaction[i].item.at(2).item;
-            scpacket.interaction[i].item[2].isAlive = !interaction[i].item.at(2).getEnable;
-            scpacket.interaction[i].item[3].itemType = interaction[i].item.at(3).item;
-            scpacket.interaction[i].item[3].isAlive = !interaction[i].item.at(3).getEnable;
+            scpacket.interaction[i].item[0].itemType = interactions_[i].item.at(0).item;
+            scpacket.interaction[i].item[0].isAlive = !interactions_[i].item.at(0).getEnable;
+            scpacket.interaction[i].item[1].itemType = interactions_[i].item.at(1).item;
+            scpacket.interaction[i].item[1].isAlive = !interactions_[i].item.at(1).getEnable;
+            scpacket.interaction[i].item[2].itemType = interactions_[i].item.at(2).item;
+            scpacket.interaction[i].item[2].isAlive = !interactions_[i].item.at(2).getEnable;
+            scpacket.interaction[i].item[3].itemType = interactions_[i].item.at(3).item;
+            scpacket.interaction[i].item[3].isAlive = !interactions_[i].item.at(3).getEnable;
         }
-        scpacket.interaction[i].interactEnable = interaction[i].interactEnable;
-        scpacket.interaction[i].state = interaction[i].state;
+        scpacket.interaction[i].interactEnable = interactions_[i].interactEnable;
+        scpacket.interaction[i].state = interactions_[i].state;
     }
 
-    for (int i = 0; i < stoneAttack.size(); ++i)
+    for (int i = 0; i < stoneAttacks_.size(); ++i)
     {
-        scpacket.stone[i].activeEnable = stoneAttack[i].activeEnable;
-        scpacket.stone[i].pos = stoneAttack[i].pos;
+        scpacket.stone[i].activeEnable = stoneAttacks_[i].activeEnable;
+        scpacket.stone[i].pos = stoneAttacks_[i].pos;
     }
 
     for (int i = 0; i < 20; ++i)
     {
-        scpacket.attack[i].activeEnable = rangeAttack[i].activeEnable;
-        scpacket.attack[i].pos = rangeAttack[i].pos;
+        scpacket.attack[i].activeEnable = rangeAttacks_[i].activeEnable;
+        scpacket.attack[i].pos = rangeAttacks_[i].pos;
     }
 
     return scpacket;
+}
+XMFLOAT3 GameMgr::GetPlayerPosition(const int id)
+{
+    if (id < 0 || id >= MAX_PLAYER) return XMFLOAT3(0, 0, 0);
+    return arr_player[id].CurPos;
+}
+
+XMFLOAT3 GameMgr::GetPlayerLook(const int id)
+{
+    if (id < 0 || id >= MAX_PLAYER) return XMFLOAT3(0, 0, 0);
+    return arr_player[id].pl_look;
+}
+
+XMFLOAT3 GameMgr::GetPlayerCameraLook(const int id)
+{
+    if (id < 0 || id >= MAX_PLAYER) return XMFLOAT3(0, 0, 0);
+    return arr_player[id].cam_look;
+}
+
+float GameMgr::GetPlayerHP(const int id)
+{
+    if (id < 0 || id >= MAX_PLAYER) return 0;
+    return arr_player[id].ps.hp;
+}
+
+XMFLOAT3 GameMgr::GetNPCPosition(const int id)
+{
+    if (id < 0 || id >= MAX_OBJECT) return XMFLOAT3(0, 0, 0);
+    return npc_[id].CurPos;
 }
