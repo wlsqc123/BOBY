@@ -291,6 +291,7 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
         do_send(p_id, &sc_packet);
 
         break;
+    default: ;
     }
 }
 
