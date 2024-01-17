@@ -11,7 +11,7 @@ LobbyMgr::LobbyMgr():retval(0),addrlen(0),buf{},wsa(),sock(0),listen_sock(0),cli
     }
 
     for (int r_id = 0; r_id < MAX_ROOM; ++r_id) {
-        for (int p_id = 0; p_id < MAX_PLAYER; ++p_id)
+        for (int p_id = 0; p_id < MAX_NUM_PLAYER; ++p_id)
             //strcpy(arr_lobby[r_id].pl[p_id].name);
             ;
     }
@@ -91,7 +91,7 @@ void LobbyMgr::g_worker(HANDLE h_iocp, SOCKET l_socket)
 
                 
                 sc_ingame_packet scpacket;
-                scpacket.id = c_id;
+                scpacket.playerId = c_id;
                 scpacket.type = SC_SET_ID_PACKET;
                 do_recv(c_id);
             }
@@ -205,7 +205,7 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
         arr_player[p_id].id = p_id;
         DB_get_time(arr_player[p_id].name);
 
-        if (arr_lobby[r_id].pl.size() < MAX_PLAYER) {
+        if (arr_lobby[r_id].pl.size() < MAX_NUM_PLAYER) {
             LOBBY_PLAYER_INFO info;
             strcpy(info.name, arr_player[p_id].name);
             info.ready = false;
@@ -229,18 +229,18 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
         sc_lobby_packet scpacket;
 
         int r_id = arr_player[p_id].r_id;
-        arr_lobby[r_id].pl[p_id].ready = cspacket->ready;     
-        arr_player[p_id].ready = cspacket->ready;
-        arr_player[p_id].wp_type = cspacket->weapon_type;
+        arr_lobby[r_id].pl[p_id].ready = cspacket->isReady;     
+        arr_player[p_id].ready = cspacket->isReady;
+        arr_player[p_id].wp_type = cspacket->weaponType;
         scpacket = get_packet(r_id);
         
-        if (arr_lobby[r_id].pl.size() == MAX_PLAYER &&
+        if (arr_lobby[r_id].pl.size() == MAX_NUM_PLAYER &&
             arr_lobby[r_id].pl[0].ready == true && arr_lobby[r_id].pl[1].ready == true
             && arr_lobby[r_id].pl[2].ready == true && arr_lobby[r_id].pl[3].ready == true) {
             cout << " all ready " << endl;
             scpacket.type = SC_LOBBY_TO_GAME_PACKET;
 
-            int id[MAX_PLAYER] = { arr_lobby[r_id].pl[0].id, arr_lobby[r_id].pl[1].id,
+            int id[MAX_NUM_PLAYER] = { arr_lobby[r_id].pl[0].id, arr_lobby[r_id].pl[1].id,
             arr_lobby[r_id].pl[2].id, arr_lobby[r_id].pl[3].id };
 
 
@@ -252,7 +252,7 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
                 arr_player[au.id].m_state = PLST_INGAME;
 
                 sc_ingame_packet set_id_packet;
-                set_id_packet.id = count;
+                set_id_packet.playerId = count;
                 set_id_packet.type = SC_SET_ID_PACKET;
                 set_id_packet.size = sizeof(sc_ingame_packet);
                 do_send(au.id, &set_id_packet);
@@ -309,10 +309,10 @@ sc_lobby_packet LobbyMgr::get_packet(int r_id)
     sc_lobby_packet packet;
 
     for (auto& au : arr_lobby[r_id].pl) {
-        strcpy(packet.info[au.id].name, au.name);
+        strcpy(packet.infos[au.id].name, au.name);
         packet.size = sizeof(sc_lobby_packet);
         packet.type = SC_LOBBY_PACKET;
-        packet.info->ready = arr_player[au.id].ready;
+        packet.infos->isReady = arr_player[au.id].ready;
     }
 
     return packet;
@@ -368,7 +368,7 @@ void LobbyMgr::DB_connect()
 
 }
 
-void LobbyMgr::DB_update(char name[MAX_NAME], int time)
+void LobbyMgr::DB_update(char name[MAX_NUM_NAME], int time)
 {
     sprintf_s(db_buf, sizeof(db_buf), "EXEC update_time %s, %d", user_id, user_time);
     retcode = SQLExecDirect(hstmt, (SQLCHAR*) db_buf, SQL_NTS);
@@ -376,7 +376,7 @@ void LobbyMgr::DB_update(char name[MAX_NAME], int time)
     cout << "retcode: " << retcode << endl;
 }
 
-int LobbyMgr::DB_get_time(char name[MAX_NAME])
+int LobbyMgr::DB_get_time(char name[MAX_NUM_NAME])
 {
     sprintf_s(db_buf, sizeof(db_buf), "EXEC select_time %s", name);
     retcode = SQLExecDirect(hstmt, (SQLCHAR*) db_buf, SQL_NTS);

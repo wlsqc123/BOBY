@@ -157,9 +157,15 @@ float Vector3::sqr_magnitude() const
 
 Vector3 Vector3::normalized() const
 {
-	XMFLOAT3 normal;
-	XMStoreFloat3(&normal, XMVector3Normalize(XMLoadFloat3(this)));
-	return normal;
+    // Convert the Vector3 to XMVECTOR for normalization
+    XMVECTOR vector = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(this));
+    vector = XMVector3Normalize(vector);
+
+    // Convert the result back to Vector3
+    XMFLOAT3 normalized;
+    XMStoreFloat3(&normalized, vector);
+
+    return {normalized.x, normalized.y, normalized.z};
 }
 
 Vector4 Vector3::ToVec4Coord() const

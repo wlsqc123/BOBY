@@ -19,7 +19,7 @@ GameMgr::~GameMgr()
 
 void GameMgr::InitGame(int id[4])
 {
-    float posX = 0.0f, posY = 0.0f, posZ = 0.0f;
+    float pos_x = 0.0f, pos_y = 0.0f, pos_z = 0.0f;
     zones_.reserve(5);
     currentZoneLevel_ = 0;
     lastStoneAttackTime_ = chrono::system_clock::now();
@@ -27,46 +27,40 @@ void GameMgr::InitGame(int id[4])
 
     //PLAYER
     {
-        for (int i = 0; i < MAX_PLAYER; ++i) {
+        for (int i = 0; i < MAX_NUM_PLAYER; ++i) {
             playerIds[i] = id[i];
         }
 
-        for (int i = 0; i != MAX_PLAYER; ++i) {
+        for (int i = 0; i != MAX_NUM_PLAYER; ++i) {
             int p_id = playerIds[i];
-
             arr_player[p_id].id = p_id;
 
+            pos_x = static_cast<float>(500 + (p_id * ((2300 - 1700) / MAX_NUM_PLAYER)));
+            pos_z = 4680.0f;
+            pos_y = mapData->GetHeight(pos_x, pos_z) * mapData->GetScale().y + 100.f;
 
-            posX = float(500 + (p_id * ((2300 - 1700) / MAX_PLAYER)));
-            posZ = 4680.0f;
-
-            //posX = float(557.519 + (p_id * ((2300 - 1700) / MAX_PLAYER)));
-            //posZ = 1202.554;
-
-            posY = mapData->GetHeight(posX, posZ) * mapData->GetScale().y + 100.f;
-
-            Vector3 pos{ posX, posY,  posZ };
+            Vector3 pos{ pos_x, pos_y,  pos_z };
             arr_player[i].InitPos = pos;
             arr_player[i].CurPos = pos;
             arr_player[i].PrevPos = pos;
             arr_player[i].ps.hp = arr_player[i].ps.maxhp = 100;
-            //라이플
+            
             switch (arr_player[i].wp_type)
             {
-            case WEAPON_RIFLE:
+            case WeaponRifle:
                 arr_player[i].ps.attackSpeed = 0.15f;
                 arr_player[i].ps.maxAmmo = 30;
                 arr_player[i].ps.ammo = 30;
                 arr_player[i].ps.attackDamage = 7.f;
                 break;
-            case WEAPON_SHOTGUN:
+            case WeaponShotgun:
                 arr_player[i].ps.attackSpeed = 0.5f;
                 arr_player[i].ps.maxAmmo = 7;
                 arr_player[i].ps.ammo = 7;
                 arr_player[i].ps.attackDamage = 5.f;
 
                 break;
-            case WEAPON_SNIPER:
+            case WeaponSniper:
                 arr_player[i].ps.attackSpeed = 1.0f;
                 arr_player[i].ps.maxAmmo = 5;
                 arr_player[i].ps.ammo = 5;
@@ -77,16 +71,15 @@ void GameMgr::InitGame(int id[4])
                 cout << "type error" << endl;
                 break;
             }
-            arr_player[i].state = none;
+            arr_player[i].state = NoneState;
 
-            Vector3 lookvec = { posX - 2050.f, 0, posZ - 1500.f };
-            lookvec = lookvec.normalized();
-            arr_player[i].pl_look = lookvec;
+            Vector3 look_vector = { pos_x - 2050.f, 0, pos_z - 1500.f };
+            look_vector = look_vector.normalized();
+            arr_player[i].pl_look = look_vector;
             arr_player[i].OOBB = BoundingOrientedBox(arr_player[i].CurPos, XMFLOAT3(OBB_SCALE_PLAYER_X, OBB_SCALE_PLAYER_Y, OBB_SCALE_PLAYER_Z), XMFLOAT4(0, 0, 0, 1));
             arr_player[i].cam_look = { 1,0,0 };
 
-
-            for (int j = 0; j < 9; ++j)
+            for (int j = 0; j < ItemTypeCount; ++j)
             {
                 ITEM_TYPE item = static_cast<ITEM_TYPE>(j);
                 arr_player[i].pl_items.insert({ item, 0 });
@@ -96,18 +89,18 @@ void GameMgr::InitGame(int id[4])
 
     //NPC
     {
-        npc_.reserve(MAX_OBJECT);
+        npc_.reserve(MAX_NUM_OBJECT);
 
         NPC new_npc;
-        posX = float(rand() % 2000 + 250);
-        posZ = float(rand() % 2000 + 250);
-        new_npc.CurPos = { posX, mapData->GetHeight(posX, posZ) * mapData->GetScale().y + 80, posZ };
+        pos_x = float(rand() % 2000 + 250);
+        pos_z = float(rand() % 2000 + 250);
+        new_npc.CurPos = { pos_x, mapData->GetHeight(pos_x, pos_z) * mapData->GetScale().y + 80, pos_z };
         new_npc.InitPos = new_npc.CurPos;
         new_npc.speed = 8;
-        new_npc.state = none;
+        new_npc.state = NoneState;
 
 
-        for (int i = 0; i < MAGMAMONSTER_NUM; ++i) {
+        for (int i = 0; i < NUM_MAGMA_MONSTERS; ++i) {
             new_npc.mob = MAGMA;
             new_npc.OOBB.Extents = { OBB_SCALE_Magmaa_X, OBB_SCALE_Magmaa_Y, OBB_SCALE_Magmaa_Z };
             new_npc.hp = 200;
@@ -116,7 +109,7 @@ void GameMgr::InitGame(int id[4])
             new_npc.coolTime = 1000;
             npc_.emplace_back(new_npc);
         }
-        for (int i = 0; i < GOLEMMONSTER_NUM; ++i) {
+        for (int i = 0; i < NUM_GOLEM_MONSTER; ++i) {
             new_npc.mob = GOLEM;
             new_npc.OOBB.Extents = { OBB_SCALE_Golem_X, OBB_SCALE_Golem_Y, OBB_SCALE_Golem_Z };
             new_npc.hp = 3500;
@@ -126,7 +119,7 @@ void GameMgr::InitGame(int id[4])
             new_npc.coolTime = 1800;
             npc_.emplace_back(new_npc);
         }
-        for (int i = 0; i < ORGEMONSTER_NUM; ++i) {
+        for (int i = 0; i < NUM_ORGE_MONSTER; ++i) {
             new_npc.mob = OGRE;
             new_npc.OOBB.Extents = { OBB_SCALE_Orge_X, OBB_SCALE_Orge_Y, OBB_SCALE_Orge_Z };
             new_npc.hp = 250;
@@ -137,30 +130,34 @@ void GameMgr::InitGame(int id[4])
             npc_.emplace_back(new_npc);
         }
 
-        for (int i = 0; i < MAX_OBJECT; ++i) {
+        for (int i = 0; i < MAX_NUM_OBJECT; ++i) {
             int rand = i % 4;
             switch (rand)
             {
             case 0:
                 npc_[i].Lookvec = npc_[i].CurPos;
                 npc_[i].Lookvec.x += 1;
-                npc_[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].Lookvec.normalized();
                 break;
+                
             case 1:
                 npc_[i].Lookvec = npc_[i].CurPos;
                 npc_[i].Lookvec.x -= 1;
-                npc_[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].Lookvec.normalized();
                 break;
+                
             case 2:
                 npc_[i].Lookvec = npc_[i].CurPos;
                 npc_[i].Lookvec.z += 1;
-                npc_[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].Lookvec.normalized();
                 break;
+                
             case 3:
                 npc_[i].Lookvec = npc_[i].CurPos;
                 npc_[i].Lookvec.z -= 1;
-                npc_[i].Lookvec.normalized();
+                npc_[i].Lookvec = npc_[i].Lookvec.normalized();
                 break;
+                
             default:
                 break;
             }
@@ -261,7 +258,7 @@ void GameMgr::InitGame(int id[4])
 
     ///static object
     {
-        interactions_.reserve(MAX_INTRACTION);
+        interactions_.reserve(MAX_NUM_INTERACTION);
 
         std::random_device rd;
 
@@ -269,7 +266,7 @@ void GameMgr::InitGame(int id[4])
 
         std::uniform_int_distribution<int> dis(0, 8);
 
-        for (int i = 0; i < CHESTOBJECT_NUM; ++i) {
+        for (int i = 0; i < NUM_CHEST_OBJECT; ++i) {
             INTERACTION new_object;
             new_object.objectName = CHEST;
             new_object.OOBB.Extents = { OBB_SCALE_Chest_X, OBB_SCALE_Chest_Y, OBB_SCALE_Chest_Z };
@@ -286,14 +283,14 @@ void GameMgr::InitGame(int id[4])
             new_object.zoneNum = 99;
             interactions_.emplace_back(new_object);
         }
-        for (int i = 0; i < DOOROBJECT_NUM; ++i) {
+        for (int i = 0; i < NUM_DOOR_OBJECT; ++i) {
             INTERACTION new_object;
             new_object.objectName = DOOR;
             new_object.OOBB.Extents = { OBB_SCALE_Door_X, OBB_SCALE_Door_Y, OBB_SCALE_Door_Z };
             new_object.zoneNum = 99;
             interactions_.emplace_back(new_object);
         }
-        for (int i = 0; i < LEVEROBJECT_NUM; ++i) {
+        for (int i = 0; i < NUM_LEVER_OBJECT; ++i) {
             INTERACTION new_object;
             new_object.objectName = LEVER;
             new_object.OOBB.Extents = { OBB_SCALE_Lever_X, OBB_SCALE_Lever_Y, OBB_SCALE_Lever_Z };
@@ -372,7 +369,7 @@ void GameMgr::InitGame(int id[4])
             world._41 = p.Pos.x, world._42 = p.Pos.y, world._43 = p.Pos.z;
             p.OOBB.Transform(p.OOBB, XMLoadFloat4x4(&world));
             p.Lookvec = Vector3(-1, 0, 0);
-            p.state = none;
+            p.state = NoneState;
             p.interactEnable = false;
         }
         interactions_[4].Lookvec = Vector3(0, 0, 1);
@@ -634,10 +631,10 @@ void GameMgr::InitGame(int id[4])
 
 void GameMgr::Update()
 {
-    for (int n_id = 0; n_id < MAX_OBJECT; ++n_id) {
+    for (int n_id = 0; n_id < MAX_NUM_OBJECT; ++n_id) {
         switch (npc_[n_id].state)
         {
-        case none:
+        case NoneState:
             for (auto& p : arr_player)
             {
                 if (find(zones_.at(currentZoneLevel_).monsterID.begin(), zones_.at(currentZoneLevel_).monsterID.end(), n_id) == zones_.at(currentZoneLevel_).monsterID.end()) continue;
@@ -645,19 +642,19 @@ void GameMgr::Update()
                 if (Vector3::Distance(npc_[n_id].CurPos, p.CurPos) < npc_[n_id].sight)
                 {
                     npc_[n_id].destPl = p.id;
-                    npc_[n_id].state = hit;
+                    npc_[n_id].state = Hit;
                 }
             }
             break;
-        case hit:
+        case Hit:
             TracePlayer(n_id);
             break;
 
-        case attack:
+        case Attacking:
             AttackPlayer(n_id);
             break;
 
-        case dead:
+        case Dead:
         {
             if (chrono::system_clock::now() - npc_[n_id].timeDeath > chrono::milliseconds(2000)) {
                 npc_[n_id].CurPos.x = -1000.f;
@@ -794,7 +791,7 @@ void GameMgr::Update()
     if (isSlowed_ && chrono::system_clock::now() - slowEffectEndTime > chrono::seconds(20))
         isSlowed_ = false;
 
-    if (npc_[9].state == dead && chrono::system_clock::now() - npc_[9].timeDeath > chrono::seconds(4))
+    if (npc_[9].state == Dead && chrono::system_clock::now() - npc_[9].timeDeath > chrono::seconds(4))
     {
         if (isEnding == false) {
             isEnding = true;
@@ -811,7 +808,7 @@ void GameMgr::TracePlayer(int n_id)
     int p_id = npc_[n_id].destPl;
     if (arr_player[p_id].ps.hp <= 0)
     {
-        npc_[n_id].state = none;
+        npc_[n_id].state = NoneState;
         return;
     }
     Vector3 player_pos = arr_player[p_id].CurPos;
@@ -824,7 +821,7 @@ void GameMgr::TracePlayer(int n_id)
         npc_[n_id].CurPos = Vector3::MoveTowards(npc_[n_id].CurPos, player_pos, speed);
     else
     {
-        npc_[n_id].state = attack;
+        npc_[n_id].state = Attacking;
         npc_[n_id].isAttack = true;
         npc_[n_id].timeLastAttack = chrono::system_clock::now();
     }
@@ -889,11 +886,11 @@ void GameMgr::AttackPlayer(int n_id)
     }
     if (0 < arr_player[p_id].ps.hp && chrono::system_clock::now() - npc_[n_id].timeLastAttack > chrono::milliseconds(2500))
     {
-        npc_[n_id].state = hit;
+        npc_[n_id].state = Hit;
     }
     if (arr_player[p_id].ps.hp <= 0)
     {
-        npc_[n_id].state = none;
+        npc_[n_id].state = NoneState;
         npc_[n_id].attackPacketEnable = false;
     }
 }
@@ -901,16 +898,16 @@ void GameMgr::AttackPlayer(int n_id)
 //버그가 있음
 void GameMgr::CheckPlayerDead(int p_id)
 {
-    if (arr_player[p_id].ps.hp <= 0 && arr_player[p_id].state != dead) {\
+    if (arr_player[p_id].ps.hp <= 0 && arr_player[p_id].state != Dead) {\
         arr_player[p_id].m_slock.lock();
         arr_player[p_id].timeDead = chrono::system_clock::now();
-        arr_player[p_id].state = dead;
+        arr_player[p_id].state = Dead;
         arr_player[p_id].CurPos = arr_player[p_id].InitPos;
         arr_player[p_id].m_slock.unlock();
     }
 
 
-    if (arr_player[p_id].state == dead && chrono::system_clock::now() - arr_player[p_id].timeDead > chrono::milliseconds(2000)) {
+    if (arr_player[p_id].state == Dead && chrono::system_clock::now() - arr_player[p_id].timeDead > chrono::milliseconds(2000)) {
         player_status ps;
         arr_player[p_id].m_slock.lock();
         int hp = arr_player[p_id].ps.maxhp;
@@ -918,19 +915,19 @@ void GameMgr::CheckPlayerDead(int p_id)
         arr_player[p_id].ps.maxhp = arr_player[p_id].ps.hp = Mathf::Min(hp, 100);
         switch (arr_player[p_id].wp_type)
         {
-        case WEAPON_RIFLE:
+        case WeaponRifle:
             arr_player[p_id].ps.attackSpeed = 0.15f;
             arr_player[p_id].ps.maxAmmo = 30;
             arr_player[p_id].ps.ammo = 30;
             arr_player[p_id].ps.attackDamage = 7.f;
             break;
-        case WEAPON_SHOTGUN:
+        case WeaponShotgun:
             arr_player[p_id].ps.attackSpeed = 0.5f;
             arr_player[p_id].ps.maxAmmo = 7;
             arr_player[p_id].ps.ammo = 7;
             arr_player[p_id].ps.attackDamage = 5.f;
             break;
-        case WEAPON_SNIPER:
+        case WeaponSniper:
             arr_player[p_id].ps.attackSpeed = 1.0f;
             arr_player[p_id].ps.maxAmmo = 5;
             arr_player[p_id].ps.ammo = 5;
@@ -940,8 +937,8 @@ void GameMgr::CheckPlayerDead(int p_id)
             cout << "type error" << endl;
             break;
         }
-        arr_player[p_id].activeItem = ITEM_EMPTY;
-        arr_player[p_id].state = none;
+        arr_player[p_id].activeItem = ItemEmpty;
+        arr_player[p_id].state = NoneState;
         arr_player[p_id].m_slock.unlock();
     }
 }
@@ -956,46 +953,46 @@ void GameMgr::ProcessPacket(int p_id, unsigned char* p_buf)
 
         for (int i = 0; i < 5; ++i)
         {
-            arr_player[p_id].bullet[i].in_use = false;
-            arr_player[p_id].bullet[i].type = type_none;
+            arr_player[p_id].bullet[i].isInUse = false;
+            arr_player[p_id].bullet[i].type = NoneType;
         }
-        arr_player[p_id].currentItem = ITEM_EMPTY;
+        arr_player[p_id].currentItem = ItemEmpty;
 
 
-        if (arr_player[p_id].state != dead)
+        if (arr_player[p_id].state != Dead)
         {
             if (cspacket->input.Key_W == true) {
-                arr_player[p_id].state = ::move;
-                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z + cspacket->look.z * arr_player[p_id].ps.speed;
-                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x + cspacket->look.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].state = ::Moving;
+                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z + cspacket->lookDirection.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x + cspacket->lookDirection.x * arr_player[p_id].ps.speed;
             }
             if (cspacket->input.Key_S == true) {
-                arr_player[p_id].state = ::move;
-                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z - cspacket->look.z * arr_player[p_id].ps.speed;
-                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x - cspacket->look.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].state = ::Moving;
+                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z - cspacket->lookDirection.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x - cspacket->lookDirection.x * arr_player[p_id].ps.speed;
             }
             if (cspacket->input.Key_A == true) {
-                arr_player[p_id].state = ::move;
-                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z + cspacket->look.x * arr_player[p_id].ps.speed;
-                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x - cspacket->look.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].state = ::Moving;
+                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z + cspacket->lookDirection.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x - cspacket->lookDirection.z * arr_player[p_id].ps.speed;
             }
             if (cspacket->input.Key_D == true) {
-                arr_player[p_id].state = ::move;
-                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z - cspacket->look.x * arr_player[p_id].ps.speed;
-                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x + cspacket->look.z * arr_player[p_id].ps.speed;
+                arr_player[p_id].state = ::Moving;
+                arr_player[p_id].CurPos.z = arr_player[p_id].CurPos.z - cspacket->lookDirection.x * arr_player[p_id].ps.speed;
+                arr_player[p_id].CurPos.x = arr_player[p_id].CurPos.x + cspacket->lookDirection.z * arr_player[p_id].ps.speed;
             }
-            if (!(cspacket->input.Key_W || cspacket->input.Key_S || cspacket->input.Key_A || cspacket->input.Key_D)) arr_player[p_id].state = ::none;
+            if (!(cspacket->input.Key_W || cspacket->input.Key_S || cspacket->input.Key_A || cspacket->input.Key_D)) arr_player[p_id].state = ::NoneState;
             if (cspacket->input.Key_Q == true) {
-                if (arr_player[p_id].activeItem == ITEM_MAXHPUP)
+                if (arr_player[p_id].activeItem == ItemMaxHPUp)
                 {
                     arr_player[p_id].ps.hp = Mathf::Min(arr_player[p_id].ps.hp + 20, arr_player[p_id].ps.maxhp);
                 }
-                else if (arr_player[p_id].activeItem == ITEM_MONSTER_SLOW)
+                else if (arr_player[p_id].activeItem == ItemMonsterSlow)
                 {
                     isSlowed_ = true;  
                     slowEffectEndTime = chrono::system_clock::now();
                 }
-                arr_player[p_id].activeItem = ITEM_EMPTY;
+                arr_player[p_id].activeItem = ItemEmpty;
             }
             if (cspacket->input.Key_B == true) {
                 arr_player[p_id].CurPos = Vector3(487, 0, 589);
@@ -1036,11 +1033,11 @@ void GameMgr::ProcessPacket(int p_id, unsigned char* p_buf)
             }
         }
 
-        if (cspacket->type == CS_SHOOT_PACKET && arr_player[p_id].state != dead) {
+        if (cspacket->type == CS_SHOOT_PACKET && arr_player[p_id].state != Dead) {
             if (arr_player[p_id].ps.ammo > 0 && !arr_player[p_id].reloadEnable) {
-                arr_player[p_id].state = attack;
+                arr_player[p_id].state = Attacking;
                 arr_player[p_id].ps.ammo--;
-                if (arr_player[p_id].wp_type == WEAPON_SHOTGUN)
+                if (arr_player[p_id].wp_type == WeaponShotgun)
                     FindCollideObjectShotGun(p_id);
                 else
                     FindCollideObject(p_id);
@@ -1067,7 +1064,7 @@ void GameMgr::ProcessPacket(int p_id, unsigned char* p_buf)
     else
         arr_player[p_id].CurPos.y = mapData->GetHeight(arr_player[p_id].CurPos.x, arr_player[p_id].CurPos.z) * mapData->GetScale().y + 100;
 
-    arr_player[p_id].pl_look = cspacket->look;
+    arr_player[p_id].pl_look = cspacket->lookDirection;
     arr_player[p_id].cam_look = cspacket->cameraLook;
 
     XMFLOAT4X4 danwi
@@ -1200,8 +1197,8 @@ void GameMgr::PickInteractionObject(int p_id)
 {
     bool			isIntersected = false;
     float			fHitDistance = 75.f, fNearestHitDistance = 150.f;
-    obj_type        object_type;
-    object_type = type_none;
+    ObjectType        object_type;
+    object_type = NoneType;
     int             object_id;
     Vector3         camera_pos = arr_player[p_id].CurPos;
 
@@ -1209,17 +1206,17 @@ void GameMgr::PickInteractionObject(int p_id)
     Matrix4x4		matColidePosition = Matrix4x4::identity;
 
 
-    for (int i = 0; i < MAX_INTRACTION; ++i) // monster check
+    for (int i = 0; i < MAX_NUM_INTERACTION; ++i) // monster check
     {
         isIntersected = CollideObjectByRayIntersection(interactions_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
-            object_type = type_static;
+            object_type = StaticType;
             object_id = i;
         }
     }
-    if (object_type == type_static)
+    if (object_type == StaticType)
     {
         if (interactions_[object_id].interactEnable == false)
         {
@@ -1244,33 +1241,33 @@ void GameMgr::FindCollideObject(int p_id)
     camera_pos.y += 20;
     bool			isIntersected = false;
     float			fHitDistance = FLT_MAX, fNearestHitDistance = FLT_MAX;
-    obj_type        object_type;
-    object_type = type_none;
+    ObjectType        object_type;
+    object_type = NoneType;
     int             object_id;
     if (arr_player[p_id].cam_look == Vector3(0, 0, 0)) arr_player[p_id].cam_look = Vector3(0, 1, 0);
-    arr_player[p_id].bullet[0].in_use = true;
+    arr_player[p_id].bullet[0].isInUse = true;
 
     Matrix4x4		matColidePosition = Matrix4x4::identity; // identity: 4x4 danwi
-    for (int i = 0; i < MAX_OBJECT; ++i) // monster check
+    for (int i = 0; i < MAX_NUM_OBJECT; ++i) // monster check
     {
         if (npc_[i].hp <= 0) continue;
         isIntersected = CollideObjectByRayIntersection(npc_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
-            object_type = type_npc;
+            object_type = NPCType;
             object_id = i;
         }
     }
 
-    for (int i = 0; i < MAX_INTRACTION; ++i) // monster check
+    for (int i = 0; i < MAX_NUM_INTERACTION; ++i) // monster check
     {
         if (interactions_[i].objectName == DOOR && interactions_[i].interactEnable == true) continue;
         isIntersected = CollideObjectByRayIntersection(interactions_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &fHitDistance);
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
-            object_type = type_static;
+            object_type = StaticType;
             object_id = i;
         }
     }
@@ -1282,13 +1279,13 @@ void GameMgr::FindCollideObject(int p_id)
         if (isIntersected && (fHitDistance < fNearestHitDistance))
         {
             fNearestHitDistance = fHitDistance;
-            object_type = type_static;
+            object_type = StaticType;
             object_id = i;
         }
     }
 
     ////////////////////////////////////////
-    if (type_none != object_type)
+    if (NoneType != object_type)
     {
         float fDistance = static_cast<float>(pow(fNearestHitDistance, 2));
         float fSumLookPos = static_cast<float>(pow(arr_player[p_id].cam_look.x, 2)) + static_cast<float>(pow(arr_player[p_id].cam_look.y, 2)) + static_cast<float>(pow(arr_player[p_id].cam_look.z, 2));
@@ -1298,32 +1295,32 @@ void GameMgr::FindCollideObject(int p_id)
         matColidePosition._42 = camera_pos.y + arr_player[p_id].cam_look.y * (sqrt(fFinal) - 2);
         matColidePosition._43 = camera_pos.z + arr_player[p_id].cam_look.z * (sqrt(fFinal) - 2);
 
-        arr_player[p_id].bullet[0].pos.x = matColidePosition._41;
-        arr_player[p_id].bullet[0].pos.y = matColidePosition._42;
-        arr_player[p_id].bullet[0].pos.z = matColidePosition._43;
+        arr_player[p_id].bullet[0].position.x = matColidePosition._41;
+        arr_player[p_id].bullet[0].position.y = matColidePosition._42;
+        arr_player[p_id].bullet[0].position.z = matColidePosition._43;
     }
 
     switch (object_type)
     {
-    case type_none:
-        arr_player[p_id].bullet[0].in_use = false;
+    case NoneType:
+        arr_player[p_id].bullet[0].isInUse = false;
         break;
-    case type_npc:
-        if (npc_[object_id].state != dead)
+    case NPCType:
+        if (npc_[object_id].state != Dead)
         {
-            arr_player[p_id].bullet[0].type = type_npc;
+            arr_player[p_id].bullet[0].type = NPCType;
             for (int p : zones_.at(npc_[object_id].zoneNum).monsterID)
             {
-                if (npc_[p].state != none) continue;
+                if (npc_[p].state != NoneState) continue;
                 npc_[p].destPl = p_id;
-                npc_[p].state = hit;
+                npc_[p].state = Hit;
             }
             if (npc_[object_id].destPl != p_id)
             {
                 if (Vector3::Distance(npc_[object_id].CurPos, arr_player[p_id].CurPos) < Vector3::Distance(npc_[object_id].CurPos, arr_player[npc_[object_id].destPl].CurPos))
                 {
                     npc_[object_id].destPl = p_id;
-                    npc_[object_id].state = hit;
+                    npc_[object_id].state = Hit;
                 }
             }
 
@@ -1345,22 +1342,22 @@ void GameMgr::FindCollideObject(int p_id)
                 if (npc_[object_id].hp == 0)
                 {
                     arr_player[p_id].ps.hp = Mathf::Min(arr_player[p_id].ps.hp + arr_player[p_id].ps.killMaxHp, arr_player[p_id].ps.maxhp);
-                    npc_[object_id].state = dead;
+                    npc_[object_id].state = Dead;
                     npc_[object_id].timeDeath = chrono::system_clock::now();
                 }
             }
             else
             {
-                npc_[object_id].state = dead;
+                npc_[object_id].state = Dead;
                 npc_[object_id].timeDeath = chrono::system_clock::now();
             }
         }
         break;
-    case type_static:
-        arr_player[p_id].bullet[0].type = type_static;
+    case StaticType:
+        arr_player[p_id].bullet[0].type = StaticType;
         //
         break;
-    case type_player:
+    case PlayerType:
         //
         break;
     }
@@ -1376,8 +1373,8 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
     {
         bool			isIntersected = false;
         float			fHitDistance = FLT_MAX, fNearestHitDistance = FLT_MAX;
-        obj_type        object_type;
-        object_type = type_none;
+        ObjectType        object_type;
+        object_type = NoneType;
         int             object_id; 
 
         Vector3 camera_look = arr_player[p_id].cam_look;
@@ -1385,28 +1382,28 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
         camera_look.y += Mathf::RandF(-0.15f, 0.15f);
         camera_look.z += Mathf::RandF(-0.15f, 0.15f);
         camera_look = camera_look.normalized();
-        arr_player[p_id].bullet[j].in_use = true;
+        arr_player[p_id].bullet[j].isInUse = true;
         Matrix4x4		matColidePosition = Matrix4x4::identity; // identity: 4x4 danwi
-        for (int i = 0; i < MAX_OBJECT; ++i) // monster check
+        for (int i = 0; i < MAX_NUM_OBJECT; ++i) // monster check
         {
             if (npc_[i].hp <= 0) continue;
             isIntersected = CollideObjectByRayIntersection(npc_[i].OOBB, camera_pos, camera_look, &fHitDistance);
             if (isIntersected && (fHitDistance < fNearestHitDistance))
             {
                 fNearestHitDistance = fHitDistance;
-                object_type = type_npc;
+                object_type = NPCType;
                 object_id = i;
             }
         }
 
-        for (int i = 0; i < MAX_INTRACTION; ++i) // monster check
+        for (int i = 0; i < MAX_NUM_INTERACTION; ++i) // monster check
         {
             if (interactions_[i].objectName == DOOR && interactions_[i].interactEnable == true) continue;
             isIntersected = CollideObjectByRayIntersection(interactions_[i].OOBB, camera_pos, camera_look, &fHitDistance);
             if (isIntersected && (fHitDistance < fNearestHitDistance))
             {
                 fNearestHitDistance = fHitDistance;
-                object_type = type_static;
+                object_type = StaticType;
                 object_id = i;
             }
         }
@@ -1418,13 +1415,13 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
             if (isIntersected && (fHitDistance < fNearestHitDistance))
             {
                 fNearestHitDistance = fHitDistance;
-                object_type = type_static;
+                object_type = StaticType;
                 object_id = i;
             }
         }
 
         ////////////////////////////////////////
-        if (type_none != object_type)
+        if (NoneType != object_type)
         {
             float fDistance = static_cast<float>(pow(fNearestHitDistance, 2));
             float fSumLookPos = static_cast<float>(pow(camera_look.x, 2)) + static_cast<float>(pow(camera_look.y, 2)) + static_cast<float>(pow(camera_look.z, 2));
@@ -1434,32 +1431,32 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
             matColidePosition._42 = camera_pos.y + camera_look.y * (sqrt(fFinal) - 2);
             matColidePosition._43 = camera_pos.z + camera_look.z * (sqrt(fFinal) - 2);
 
-            arr_player[p_id].bullet[j].pos.x = matColidePosition._41;
-            arr_player[p_id].bullet[j].pos.y = matColidePosition._42;
-            arr_player[p_id].bullet[j].pos.z = matColidePosition._43;
+            arr_player[p_id].bullet[j].position.x = matColidePosition._41;
+            arr_player[p_id].bullet[j].position.y = matColidePosition._42;
+            arr_player[p_id].bullet[j].position.z = matColidePosition._43;
         }
 
         switch (object_type)
         {
-        case type_none:
-            arr_player[p_id].bullet[j].in_use = false;
+        case NoneType:
+            arr_player[p_id].bullet[j].isInUse = false;
             break;
-        case type_npc:
-            if (npc_[object_id].state != dead)
+        case NPCType:
+            if (npc_[object_id].state != Dead)
             {
-                arr_player[p_id].bullet[j].type = type_npc;
+                arr_player[p_id].bullet[j].type = NPCType;
                 for (int p : zones_.at(npc_[object_id].zoneNum).monsterID)
                 {
-                    if (npc_[p].state != none) continue;
+                    if (npc_[p].state != NoneState) continue;
                     npc_[p].destPl = p_id;
-                    npc_[p].state = hit;
+                    npc_[p].state = Hit;
                 }
                 if (npc_[object_id].destPl != p_id)
                 {
                     if (Vector3::Distance(npc_[object_id].CurPos, arr_player[p_id].CurPos) < Vector3::Distance(npc_[object_id].CurPos, arr_player[npc_[object_id].destPl].CurPos))
                     {
                         npc_[object_id].destPl = p_id;
-                        npc_[object_id].state = hit;
+                        npc_[object_id].state = Hit;
                     }
                 }
 
@@ -1481,22 +1478,22 @@ void GameMgr::FindCollideObjectShotGun(int p_id)
                     if (npc_[object_id].hp == 0)
                     {
                         arr_player[p_id].ps.hp = Mathf::Min(arr_player[p_id].ps.hp + arr_player[p_id].ps.killMaxHp, arr_player[p_id].ps.maxhp);
-                        npc_[object_id].state = dead;
+                        npc_[object_id].state = Dead;
                         npc_[object_id].timeDeath = chrono::system_clock::now();
                     }
                 }
                 else
                 {
-                    npc_[object_id].state = dead;
+                    npc_[object_id].state = Dead;
                     npc_[object_id].timeDeath = chrono::system_clock::now();
                 }
             }
             break;
-        case type_static:
-            arr_player[p_id].bullet[j].type = type_static;
+        case StaticType:
+            arr_player[p_id].bullet[j].type = StaticType;
             //
             break;
-        case type_player:
+        case PlayerType:
             //
             break;
         }
@@ -1518,41 +1515,41 @@ void GameMgr::SetItem(int id, ITEM_TYPE item)
     arr_player[id].currentItem = item;
     switch (item)
     {
-    case ITEM_TYPE::ITEM_DAMAGEUP_MAXHPDOWN:
+    case ITEM_TYPE::ItemDamageUpMaxHpDown:
         //데미지 증가 최대체력 감소 아이템처리
         arr_player[id].ps.maxhp /= 2;
         arr_player[id].ps.hp = Mathf::Min(arr_player[id].ps.maxhp, arr_player[id].ps.hp);
         arr_player[id].ps.attackDamage *= 2;
         break;
-    case ITEM_TYPE::ITEM_BLOCK_DAMAGE:
+    case ITEM_TYPE::ItemBlockDamage:
         arr_player[id].ps.block += 10;
         break;
-    case ITEM_TYPE::ITEM_BOSS_DAMAGEUP:
+    case ITEM_TYPE::ItemBossDamageUp:
         arr_player[id].ps.bossDamage += 20;
         break;
-    case ITEM_TYPE::ITEM_KILL_MAXHPUP:
+    case ITEM_TYPE::ItemKillMaxHpUp:
         arr_player[id].ps.killMaxHp += 1;
         break;
-    case ITEM_TYPE::ITEM_INSTANT_DEATH:
+    case ITEM_TYPE::ItemInstantDeath:
         if (arr_player[id].ps.instantDeath == 0)
             arr_player[id].ps.instantDeath += 10;
         else
             arr_player[id].ps.instantDeath += 5;
         break;
-    case ITEM_TYPE::ITEM_MONSTER_SLOW:
+    case ITEM_TYPE::ItemMonsterSlow:
         arr_player[id].activeItem = item;
         //arr_player[id].currentItem = ITEM_EMPTY;
         break;
-    case ITEM_TYPE::ITEM_PLAYER_SPEEDUP:
+    case ITEM_TYPE::ItemPlayerSpeedUp:
         //플레이어 스피드업 아이템처리
         arr_player[id].ps.speed *= 1.2;
         break;
-    case ITEM_TYPE::ITEM_MAXHPUP:
+    case ITEM_TYPE::ItemMaxHPUp:
         //최대 체력 증가 아이템 처리
         arr_player[id].activeItem = item;
         //arr_player[id].currentItem = ITEM_EMPTY;
         break;
-    case ITEM_TYPE::ITEM_ATTACK_SPEEDUP:
+    case ITEM_TYPE::ItemAttackSpeedUp:
         arr_player[id].ps.attackSpeed /= 1.2f;
         break;
     }
@@ -1575,104 +1572,104 @@ sc_ingame_packet GameMgr::GetPacket(sc_ingame_packet packet)
     if (isEnding) {
         scpacket.type = SC_GAME_TO_ENDING_PACKET;
         chrono::duration<int> t = chrono::duration_cast<chrono::seconds> (endTime - startTime);
-        scpacket.play_time = t.count();
+        scpacket.playTime = t.count();
     }
     else
         scpacket.type = SC_INGAME_PACKET;
     scpacket.size = sizeof(sc_ingame_packet);
     //cout << scpacket.size << endl;
-    scpacket.id = 0;
+    scpacket.playerId = 0;
 
 
-    for (int i = 0; i < MAX_PLAYER; ++i)
+    for (int i = 0; i < MAX_NUM_PLAYER; ++i)
     {
         int id = playerIds[i];
 
-        scpacket.player[i].pos = arr_player[id].CurPos;
-        scpacket.player[i].look = arr_player[id].pl_look;
-        scpacket.player[i].cameraLook = arr_player[id].cam_look;
-        scpacket.player[i].state = arr_player[id].state;
-        scpacket.player[i].id = i;
-        scpacket.player[i].zoneNum = currentZoneLevel_;
-        scpacket.player[i].ps.hp = arr_player[id].ps.hp;
-        scpacket.player[i].ps.maxHp = arr_player[id].ps.maxhp;
-        scpacket.player[i].ps.attackSpeed = arr_player[id].ps.attackSpeed;
-        scpacket.player[i].reloadEnable = arr_player[id].reloadEnable;
-        scpacket.player[i].ammo = arr_player[id].ps.ammo;
-        memset(scpacket.player[i].bullet, NULL, sizeof(Bullet) * 5);
-        memcpy(scpacket.player[i].bullet, arr_player[id].bullet, sizeof(Bullet) * 5);
-        scpacket.player[i].currentItem = arr_player[id].currentItem;
+        scpacket.players[i].position = arr_player[id].CurPos;
+        scpacket.players[i].lookDirection = arr_player[id].pl_look;
+        scpacket.players[i].cameraLook = arr_player[id].cam_look;
+        scpacket.players[i].state = arr_player[id].state;
+        scpacket.players[i].id = i;
+        scpacket.players[i].zoneNumber = currentZoneLevel_;
+        scpacket.players[i].status.healthPoints = arr_player[id].ps.hp;
+        scpacket.players[i].status.maxHealthPoints = arr_player[id].ps.maxhp;
+        scpacket.players[i].status.attackSpeed = arr_player[id].ps.attackSpeed;
+        scpacket.players[i].isReloading = arr_player[id].reloadEnable;
+        scpacket.players[i].ammoCount = arr_player[id].ps.ammo;
+        memset(scpacket.players[i].bullet, NULL, sizeof(Bullet) * 5);
+        memcpy(scpacket.players[i].bullet, arr_player[id].bullet, sizeof(Bullet) * 5);
+        scpacket.players[i].currentItem = arr_player[id].currentItem;
     }
 
-    for (int i = 0; i < MAX_OBJECT; ++i) // 오류 발생
+    for (int i = 0; i < MAX_NUM_OBJECT; ++i) // 오류 발생
     {
-        scpacket.npc[i].id = i;
-        scpacket.npc[i].pos = npc_[i].CurPos;
-        scpacket.npc[i].look = npc_[i].Lookvec;
-        scpacket.npc[i].hp = npc_[i].hp;
-        scpacket.npc[i].attackEnable = npc_[i].attackPacketEnable;
-        scpacket.npc[i].state = npc_[i].state;
+        scpacket.npcs[i].id = i;
+        scpacket.npcs[i].position = npc_[i].CurPos;
+        scpacket.npcs[i].lookDirection = npc_[i].Lookvec;
+        scpacket.npcs[i].healthPoints = npc_[i].hp;
+        scpacket.npcs[i].isAttack = npc_[i].attackPacketEnable;
+        scpacket.npcs[i].state = npc_[i].state;
     }
 
-    for (int i = 0; i < MAX_INTRACTION; ++i)
+    for (int i = 0; i < MAX_NUM_INTERACTION; ++i)
     {
-        scpacket.interaction[i].pos = interactions_[i].Pos;
-        scpacket.interaction[i].look = interactions_[i].Lookvec;
+        scpacket.interactions[i].position = interactions_[i].Pos;
+        scpacket.interactions[i].lookDirection = interactions_[i].Lookvec;
         if (interactions_[i].item.size() != 0)
         {
-            scpacket.interaction[i].item[0].itemType = interactions_[i].item.at(0).item;
-            scpacket.interaction[i].item[0].isAlive = !interactions_[i].item.at(0).getEnable;
-            scpacket.interaction[i].item[1].itemType = interactions_[i].item.at(1).item;
-            scpacket.interaction[i].item[1].isAlive = !interactions_[i].item.at(1).getEnable;
-            scpacket.interaction[i].item[2].itemType = interactions_[i].item.at(2).item;
-            scpacket.interaction[i].item[2].isAlive = !interactions_[i].item.at(2).getEnable;
-            scpacket.interaction[i].item[3].itemType = interactions_[i].item.at(3).item;
-            scpacket.interaction[i].item[3].isAlive = !interactions_[i].item.at(3).getEnable;
+            scpacket.interactions[i].items[0].itemType = interactions_[i].item.at(0).item;
+            scpacket.interactions[i].items[0].isAlive = !interactions_[i].item.at(0).getEnable;
+            scpacket.interactions[i].items[1].itemType = interactions_[i].item.at(1).item;
+            scpacket.interactions[i].items[1].isAlive = !interactions_[i].item.at(1).getEnable;
+            scpacket.interactions[i].items[2].itemType = interactions_[i].item.at(2).item;
+            scpacket.interactions[i].items[2].isAlive = !interactions_[i].item.at(2).getEnable;
+            scpacket.interactions[i].items[3].itemType = interactions_[i].item.at(3).item;
+            scpacket.interactions[i].items[3].isAlive = !interactions_[i].item.at(3).getEnable;
         }
-        scpacket.interaction[i].interactEnable = interactions_[i].interactEnable;
-        scpacket.interaction[i].state = interactions_[i].state;
+        scpacket.interactions[i].isInteracting = interactions_[i].interactEnable;
+        scpacket.interactions[i].state = interactions_[i].state;
     }
 
     for (int i = 0; i < stoneAttacks_.size(); ++i)
     {
-        scpacket.stone[i].activeEnable = stoneAttacks_[i].activeEnable;
-        scpacket.stone[i].pos = stoneAttacks_[i].pos;
+        scpacket.stones[i].isActive = stoneAttacks_[i].activeEnable;
+        scpacket.stones[i].position = stoneAttacks_[i].pos;
     }
 
     for (int i = 0; i < 20; ++i)
     {
-        scpacket.attack[i].activeEnable = rangeAttacks_[i].activeEnable;
-        scpacket.attack[i].pos = rangeAttacks_[i].pos;
+        scpacket.attacks[i].isActive = rangeAttacks_[i].activeEnable;
+        scpacket.attacks[i].position = rangeAttacks_[i].pos;
     }
 
     return scpacket;
 }
 XMFLOAT3 GameMgr::GetPlayerPosition(const int id)
 {
-    if (id < 0 || id >= MAX_PLAYER) return XMFLOAT3(0, 0, 0);
+    if (id < 0 || id >= MAX_NUM_PLAYER) return XMFLOAT3(0, 0, 0);
     return arr_player[id].CurPos;
 }
 
 XMFLOAT3 GameMgr::GetPlayerLook(const int id)
 {
-    if (id < 0 || id >= MAX_PLAYER) return XMFLOAT3(0, 0, 0);
+    if (id < 0 || id >= MAX_NUM_PLAYER) return XMFLOAT3(0, 0, 0);
     return arr_player[id].pl_look;
 }
 
 XMFLOAT3 GameMgr::GetPlayerCameraLook(const int id)
 {
-    if (id < 0 || id >= MAX_PLAYER) return XMFLOAT3(0, 0, 0);
+    if (id < 0 || id >= MAX_NUM_PLAYER) return XMFLOAT3(0, 0, 0);
     return arr_player[id].cam_look;
 }
 
 float GameMgr::GetPlayerHP(const int id)
 {
-    if (id < 0 || id >= MAX_PLAYER) return 0;
+    if (id < 0 || id >= MAX_NUM_PLAYER) return 0;
     return arr_player[id].ps.hp;
 }
 
 XMFLOAT3 GameMgr::GetNPCPosition(const int id)
 {
-    if (id < 0 || id >= MAX_OBJECT) return XMFLOAT3(0, 0, 0);
+    if (id < 0 || id >= MAX_NUM_OBJECT) return XMFLOAT3(0, 0, 0);
     return npc_[id].CurPos;
 }

@@ -114,7 +114,7 @@ struct Player
 	////////
 	int r_id;
 	bool ready;
-	char name[MAX_NAME];
+	char name[MAX_NUM_NAME];
 	//...
 	/// /////
 	int		id;
@@ -130,7 +130,7 @@ struct Player
 	Vector3				pl_look;
 	Vector3				cam_look;
 
-	obj_state	state;
+	ObjectState	state;
 	
 	Bullet		bullet[5];
 	bool		reloadEnable;
@@ -150,7 +150,7 @@ struct NPC
 	float		speed;
 	int			destPl;
 	Monster		mob;
-	obj_state	state;
+	ObjectState	state;
 	int			attackRange;
 	int			sight;
 	int			zoneNum;
@@ -176,7 +176,7 @@ struct INTERACTION
 {
 	int			id;
 	int			type;
-	obj_state	state;
+	ObjectState	state;
 	STATIC_OBJECT objectName;
 
 	Vector3 Pos;
@@ -230,7 +230,7 @@ struct Client
 
 struct OBJECT
 {
-	obj_type type;
+	ObjectType type;
 	WORD id;
 
 	Vector3 pos;
@@ -242,7 +242,7 @@ struct OBJECT
 struct LOBBY_PLAYER_INFO
 {
 	int		id;
-	char	name[MAX_NAME];
+	char	name[MAX_NUM_NAME];
 	bool	ready;
 };
 

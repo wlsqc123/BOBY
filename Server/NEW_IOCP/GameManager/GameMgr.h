@@ -36,7 +36,7 @@ public:
     bool	            isRunning = false;
     bool                isEnding = false;
     int                 roomId;
-    int                 playerIds[MAX_PLAYER];
+    int                 playerIds[MAX_NUM_PLAYER];
     
     Vector3 GetPositionToHeightMap(float x, float z, float addy);
 

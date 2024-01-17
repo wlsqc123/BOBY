@@ -1,45 +1,61 @@
 #pragma once
 
-enum obj_type { type_none, type_npc, type_static, type_player, type_item };
-enum obj_state { none, move, attack, hit, dead, interaction};
+enum ObjectType
+{
+    NoneType,
+    NPCType,       // NPC
+    StaticType,    // 정적 객체
+    PlayerType,    // 플레이어
+    ItemType       // 아이템
+};
 
-constexpr int MAX_BUFFER = 4096;
+enum ObjectState
+{
+    NoneState,
+    Moving,     // 이동중
+    Attacking,  // 공격중
+    Hit,        // 피격
+    Dead,       // 사망
+    Interacting // 상호작용
+};
+
+constexpr int MAX_BUFFER = 4096; // 버퍼 최대 크기
 
 //monster
-constexpr int MAGMAMONSTER_NUM = 9;
-constexpr int GOLEMMONSTER_NUM = 1;
-constexpr int ORGEMONSTER_NUM = 8;
+constexpr int NUM_MAGMA_MONSTERS = 9; // 마그마 수
+constexpr int NUM_GOLEM_MONSTER = 1; // 골렘 수
+constexpr int NUM_ORGE_MONSTER = 8;  // 오거 수
 
 //interaction
-constexpr int CHESTOBJECT_NUM = 6;
-constexpr int DOOROBJECT_NUM = 6;
-constexpr int LEVEROBJECT_NUM = 1;
+constexpr int NUM_CHEST_OBJECT = 6;
+constexpr int NUM_DOOR_OBJECT = 6;
+constexpr int NUM_LEVER_OBJECT = 1;
 
-constexpr int MAX_OBJECT = MAGMAMONSTER_NUM + GOLEMMONSTER_NUM + ORGEMONSTER_NUM;
-constexpr int MAX_INTRACTION = CHESTOBJECT_NUM + DOOROBJECT_NUM + LEVEROBJECT_NUM + 1/* + 6*/;
-constexpr int MAX_PLAYER = 4;
-constexpr int MAX_NAME = 16;
+constexpr int MAX_NUM_OBJECT = NUM_MAGMA_MONSTERS + NUM_GOLEM_MONSTER + NUM_ORGE_MONSTER;
+constexpr int MAX_NUM_INTERACTION = NUM_CHEST_OBJECT + NUM_DOOR_OBJECT + NUM_LEVER_OBJECT + 1;
+constexpr int MAX_NUM_PLAYER = 4;
+constexpr int MAX_NUM_NAME = 16;
 
 enum ITEM_TYPE
 {
-	ITEM_INSTANT_DEATH, //ü�� 10%���� ���� ���óġ
-	ITEM_BLOCK_DAMAGE, //Ȯ���� ���� ����
-	ITEM_KILL_MAXHPUP, //���� ���Ͻ� �ִ� ü�»��
-	ITEM_MONSTER_SLOW,
-	ITEM_DAMAGEUP_MAXHPDOWN, //
-	ITEM_PLAYER_SPEEDUP,
-	ITEM_BOSS_DAMAGEUP,
-	ITEM_ATTACK_SPEEDUP,
-	ITEM_MAXHPUP,
-	ITEM_EMPTY, //������ȹ�� ������
+    ItemInstantDeath,        // 즉사 아이템
+    ItemBlockDamage,         // 데미지 차단 아이템
+    ItemKillMaxHpUp,         // 최대 HP 증가 아이템
+    ItemMonsterSlow,         // 몬스터 속도 감소 아이템
+    ItemDamageUpMaxHpDown,   // 데미지 증가 및 최대 HP 감소 아이템
+    ItemPlayerSpeedUp,       // 플레이어 속도 증가 아이템
+    ItemBossDamageUp,        // 보스 데미지 증가 아이템
+    ItemAttackSpeedUp,       // 공격 속도 증가 아이템
+    ItemMaxHpUp,             // 최대 HP 증가 아이템
+    ItemEmpty,               // 빈 아이템
+    ItemTypeCount            // 아이템 타입 개수
 };
-
 
 enum WEAPON_TYPE
 {
-	WEAPON_RIFLE,
-	WEAPON_SNIPER,
-	WEAPON_SHOTGUN,
+	WeaponRifle,
+	WeaponSniper,
+	WeaponShotgun,
 };
 
 ////////////////////////////////////////
@@ -77,15 +93,15 @@ struct KeyInput
 
 struct Bullet
 {
-	bool in_use;
-	obj_type type;
-	Vector3 pos;
+	bool isInUse;
+	ObjectType type;
+	Vector3 position;
 };
 
-struct player_Status
+struct PlayerStatus
 {
-	int hp;
-	int maxHp;
+	int healthPoints;
+	int maxHealthPoints;
 	float attackSpeed;
 };
 
@@ -104,90 +120,90 @@ struct item_packet
 
 struct attack_packet
 {
-	Vector3			pos;
-	bool			activeEnable;
+	Vector3			position;
+	bool			isActive;
 };
 
 struct player_packet
 {
 	WORD			id;
-	Vector3			pos;
-	Vector3			look;
+	Vector3			position;
+	Vector3			lookDirection;
 	Vector3			cameraLook;
-	player_Status	ps;
-	obj_state		state;
+	PlayerStatus	status;
+	ObjectState		state;
 	Bullet			bullet[5];
-	bool			reloadEnable;
-	short			ammo;
+	bool			isReloading;
+	short			ammoCount;
 	ITEM_TYPE		currentItem;
-	int				zoneNum;
+	int				zoneNumber;
 };
 
-struct npc_info
+struct NPCInfo
 {
 	WORD		id;
-	Vector3		pos;
-	Vector3		look;
-	int			hp;
-	bool		attackEnable;
-	obj_state	state;
+	Vector3		position;
+	Vector3		lookDirection;
+	int			healthPoints;
+	bool		isAttack;
+	ObjectState	state;
 };
 
-struct interaction_packet
+struct InteractionPacket
 {
 	WORD		id;
-	Vector3		pos;
-	Vector3		look;
-	obj_state	state;
-	item_packet   item[4];
-	bool		interactEnable;
+	Vector3		position;
+	Vector3		lookDirection;
+	ObjectState	state;
+	item_packet items[4];
+	bool		isInteracting;
 };
 
 struct sc_ingame_packet
 {
 	int					size;
 	int					type;
-	int					id;
-	player_packet		player[MAX_PLAYER];
-	npc_info			npc[MAX_OBJECT];
-	interaction_packet  interaction[MAX_INTRACTION];
-	attack_packet		attack[20];
-	attack_packet		stone[10];
-	int					play_time;
+	int					playerId;
+	player_packet		players[MAX_NUM_PLAYER];
+	NPCInfo			    npcs[MAX_NUM_OBJECT];
+	InteractionPacket   interactions[MAX_NUM_INTERACTION];
+	attack_packet		attacks[20];
+	attack_packet		stones[10];
+	int					playTime;
 };
 
 struct cs_ingame_packet
 {
-	int size;
-	int type;
-	int id;
-	KeyInput input;
-	Vector3 look;
-	Vector3 cameraLook;
-	CS_ITEM item;
+	int         size;
+	int         type;
+	int         playerId;
+	KeyInput    input;
+	Vector3     lookDirection;
+	Vector3     cameraLook;
+	CS_ITEM     item;
 };
 
 struct lobby_info
 {
-	char name[MAX_NAME];
-	bool ready;
+	char name[MAX_NUM_NAME];
+	bool isReady;
 };
 
 struct sc_lobby_packet
 {
-	int size;
-	int type;
-	lobby_info info[MAX_PLAYER];
+	int         size;
+	int         type;
+	lobby_info  infos[MAX_NUM_PLAYER];
 };
 
 struct cs_lobby_packet
 {
-	int size;
-	int type;
-	int r_id;
-	char name[MAX_NAME];
-	bool ready;
-	WEAPON_TYPE weapon_type;
+	int         size;
+	int         type;
+	int         roomId;
+	char        name[MAX_NUM_NAME];
+	bool        isReady;
+	WEAPON_TYPE weaponType;
 };
 
 

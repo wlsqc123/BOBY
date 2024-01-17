@@ -29,7 +29,7 @@ private:
 
 	//DB
 private:
-	char user_id[MAX_NAME];
+	char user_id[MAX_NUM_NAME];
 	char db_buf[100];
 	int user_time;
 
@@ -39,7 +39,7 @@ private:
 	SQLHSTMT hstmt = 0;
 	SQLRETURN retcode;
 
-	SQLWCHAR szUser_Name[MAX_NAME];
+	SQLWCHAR szUser_Name[MAX_NUM_NAME];
 	SQLINTEGER dUser_time, dUser_level;
 
 	SQLLEN cbID = 0;
@@ -89,7 +89,7 @@ public:
 
 public:
 	void	DB_connect();
-	void	DB_update(char name[MAX_NAME], int time);
-	int		DB_get_time(char name[MAX_NAME]);
+	void	DB_update(char name[MAX_NUM_NAME], int time);
+	int		DB_get_time(char name[MAX_NUM_NAME]);
 };
 
