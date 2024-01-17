@@ -59,7 +59,7 @@ Quaternion Quaternion::inverse() const
 	return result;
 }
 
-Vector3 Quaternion::euler_angles() const
+Vector3 Quaternion::eulerAngles() const
 {
 	//XMFLOAT3 angles;
 
@@ -98,15 +98,15 @@ Vector3 Quaternion::euler_angles() const
 
 
 	// new code
-	Quaternion q = this->Normalized();
+	Quaternion q = this->normalized();
 
 	Vector3 euler;
 
 	// if the input quaternion is normalized, this is exactly one. Otherwise, this acts as a correction factor for the quaternion's not-normalizedness
-	const float unit = (q.x * q.x) + (q.y * q.y) + (q.z * q.z) + (q.w * q.w);
+	float unit = (q.x * q.x) + (q.y * q.y) + (q.z * q.z) + (q.w * q.w);
 
 	// this will have a magnitude of 0.5 or greater if and only if this is a singularity case
-	const float test = q.x * q.w - q.y * q.z;
+	float test = q.x * q.w - q.y * q.z;
 
 	if (test > 0.4995f * unit) // singularity at north pole
 	{
@@ -142,7 +142,7 @@ Vector3 Quaternion::euler_angles() const
 	return euler;
 }
 
-Quaternion Quaternion::Normalized() const
+Quaternion Quaternion::normalized() const
 {
 	XMFLOAT4 result;
 	XMStoreFloat4(&result, XMQuaternionNormalize(XMLoadFloat4(this)));
@@ -161,7 +161,7 @@ float Quaternion::Angle(const Quaternion& a, const Quaternion& b)
 
 float Quaternion::AngleRad(const Quaternion& a, const Quaternion& b)
 {
-	return Dot(a.Normalized(), b.Normalized());
+	return Dot(a.normalized(), b.normalized());
 }
 
 Quaternion Quaternion::AngleAxis(float angle, const Vector3& axis)
@@ -197,15 +197,15 @@ Quaternion Quaternion::SlerpUnclamped(const Quaternion& a, const Quaternion& b, 
 
 Quaternion Quaternion::FromToRotation(const Vector3& from_direction, const Vector3& to_direction)
 {
-	const Vector3 axis = Vector3::Cross(from_direction, to_direction).normalized();
-	const float angle = Vector3::AngleRad(from_direction, to_direction);
+	Vector3 axis = Vector3::Cross(from_direction, to_direction).normalized();
+	float angle = Vector3::AngleRad(from_direction, to_direction);
 
 	XMFLOAT4 result;
 	XMStoreFloat4(&result, XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle));
 	return result;
 }
 
-Quaternion Quaternion::RotateTowards(const Quaternion&from, const Quaternion&to)
+Quaternion Quaternion::RotateTowards(const Quaternion& from, const Quaternion& to, float maxDegreesDelta)
 {
 	return Quaternion();
 }

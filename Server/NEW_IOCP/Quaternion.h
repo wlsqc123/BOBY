@@ -20,8 +20,8 @@ public:
 	bool operator!=(const Quaternion& other) const;
 		
 	Quaternion inverse() const;
-	Vector3 euler_angles() const;
-	Quaternion Normalized() const;
+	Vector3 eulerAngles() const;
+	Quaternion normalized() const;
 
 	void SetFromToRotation(const Vector3& from_direction, const Vector3& to_direction);
 	
@@ -41,7 +41,7 @@ public:
 	static Quaternion SlerpUnclamped(const Quaternion& a, const Quaternion& b, float t);
 
 	static Quaternion FromToRotation(const Vector3& from_direction, const Vector3& to_direction);
-	static Quaternion RotateTowards(const Quaternion&from, const Quaternion&to);
+	static Quaternion RotateTowards(const Quaternion& from, const Quaternion& to, float maxDegreesDelta);
 	
 	friend class Matrix4x4;
 

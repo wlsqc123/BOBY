@@ -1,5 +1,4 @@
 #include "GameMgr.h"
-#include <chrono>
 #include <random>
 #include <tchar.h>
 
@@ -19,7 +18,7 @@ void GameMgr::init_game(int id[4])
     
     game_zones_.reserve(5);
     zone_level_ = 0;
-    stone_time_ = std::chrono::system_clock::now();
+    stone_time_ = chrono::system_clock::now();
     r_id = arr_player[id[0]].r_id;
 
     //PLAYER
@@ -258,7 +257,7 @@ void GameMgr::init_game(int id[4])
 
     ///static object
     {
-        interaction_.reserve(max_interaction);
+        interaction_.reserve(max_intraction);
 
         std::random_device rd;
 
@@ -1023,10 +1022,10 @@ void GameMgr::process_packet(const int p_id, unsigned char* p_buf)
         }
 
         //아이템 처리
-        if (cs_packet->item.do_send)
+        if (cs_packet->item.doSend)
         {
-            const int chest_id = cs_packet->item.chest_id;
-            const int item_id = cs_packet->item.item_id;
+            const int chest_id = cs_packet->item.chestId;
+            const int item_id = cs_packet->item.itemId;
             if(!interaction_[chest_id].item.at(item_id).getEnable)
             { 
                 arr_player[p_id].pl_items.find(interaction_[chest_id].item.at(item_id).item)->second += 1;
@@ -1188,7 +1187,7 @@ void GameMgr::npc_coll_check(const int id)
 
 }
 
-bool GameMgr::checkRayIntersection(const BoundingOrientedBox& object_bounding_box, const Vector3& position, const Vector3& direction, float* distance)
+bool GameMgr::collide_object_by_ray_intersection(const BoundingOrientedBox& object_bounding_box, const Vector3& position, const Vector3& direction, float* distance)
 {
     const XMVECTOR xm_ray_origin = XMLoadFloat3(&position);
     const XMVECTOR xm_ray_direction = XMLoadFloat3(&direction);
@@ -1205,9 +1204,9 @@ void GameMgr::pick_interaction_object(int p_id)
 
     camera_pos.y += 20;
 
-    for (int i = 0; i < max_interaction; ++i) // monster check
+    for (int i = 0; i < max_intraction; ++i) // monster check
     {
-        is_intersected = checkRayIntersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
         if (is_intersected && (hit_distance < nearest_hit_distance))
         {
             nearest_hit_distance = hit_distance;
@@ -1234,7 +1233,7 @@ void GameMgr::pick_interaction_object(int p_id)
     }
 }
 
-void GameMgr::find_collide_object(const int p_id)
+void GameMgr::find_collide_object(int p_id)
 {
     Vector3         camera_pos = arr_player[p_id].cur_pos;
     camera_pos.y += 20;
@@ -1248,10 +1247,8 @@ void GameMgr::find_collide_object(const int p_id)
     Matrix4x4		mat_collide_position = Matrix4x4::identity; // identity: 4x4 unit
     for (int i = 0; i < max_object; ++i) // monster check
     {
-        // 생명이 없는 NPC는 무시
         if (npc_[i].hp <= 0) continue;
-        
-        is_intersected = checkRayIntersection(npc_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        is_intersected = collide_object_by_ray_intersection(npc_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
         if (is_intersected && (hit_distance < nearest_hit_distance))
         {
             nearest_hit_distance = hit_distance;
@@ -1260,10 +1257,10 @@ void GameMgr::find_collide_object(const int p_id)
         }
     }
 
-    for (int i = 0; i < max_interaction; ++i) // monster check
+    for (int i = 0; i < max_intraction; ++i) // monster check
     {
         if (interaction_[i].object_name == door && interaction_[i].interact_enable == true) continue;
-        is_intersected = checkRayIntersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
         if (is_intersected && (hit_distance < nearest_hit_distance))
         {
             nearest_hit_distance = hit_distance;
@@ -1275,7 +1272,7 @@ void GameMgr::find_collide_object(const int p_id)
     for (int i = 0; i < structure_.size(); ++i)
     {
         if (structure_[i].type == fence) continue;
-        is_intersected = checkRayIntersection(structure_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
+        is_intersected = collide_object_by_ray_intersection(structure_[i].OOBB, camera_pos, arr_player[p_id].cam_look, &hit_distance);
         if (is_intersected && (hit_distance < nearest_hit_distance))
         {
             nearest_hit_distance = hit_distance;
@@ -1387,7 +1384,7 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
         for (int i = 0; i < max_object; ++i) // monster check
         {
             if (npc_[i].hp <= 0) continue;
-            is_intersected = checkRayIntersection(npc_[i].OOBB, camera_pos, camera_look, &hit_distance);
+            is_intersected = collide_object_by_ray_intersection(npc_[i].OOBB, camera_pos, camera_look, &hit_distance);
             if (is_intersected && (hit_distance < nearest_hit_distance))
             {
                 nearest_hit_distance = hit_distance;
@@ -1396,10 +1393,10 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
             }
         }
 
-        for (int i = 0; i < max_interaction; ++i) // monster check
+        for (int i = 0; i < max_intraction; ++i) // monster check
         {
             if (interaction_[i].object_name == door && interaction_[i].interact_enable == true) continue;
-            is_intersected = checkRayIntersection(interaction_[i].OOBB, camera_pos, camera_look, &hit_distance);
+            is_intersected = collide_object_by_ray_intersection(interaction_[i].OOBB, camera_pos, camera_look, &hit_distance);
             if (is_intersected && (hit_distance < nearest_hit_distance))
             {
                 nearest_hit_distance = hit_distance;
@@ -1411,7 +1408,7 @@ void GameMgr::find_collide_object_shot_gun(int p_id)
         for (int i = 0; i < structure_.size(); ++i)
         {
             if (structure_[i].type == fence) continue;
-            is_intersected = checkRayIntersection(structure_[i].OOBB, camera_pos, camera_look, &hit_distance);
+            is_intersected = collide_object_by_ray_intersection(structure_[i].OOBB, camera_pos, camera_look, &hit_distance);
             if (is_intersected && (hit_distance < nearest_hit_distance))
             {
                 nearest_hit_distance = hit_distance;
@@ -1505,7 +1502,7 @@ void GameMgr::check_interaction_object(int p_id)
 {
 }
 
-void GameMgr::set_hp(const int id, const int hp)
+void GameMgr::set_hp(int id, int hp)
 {
     arr_player[id].ps.hp = hp;
 }
@@ -1515,7 +1512,7 @@ void GameMgr::set_pos(int id, XMFLOAT3 pos)
 }
 
 
-void GameMgr::set_item(const int id, const ITEM_TYPE item)
+void GameMgr::set_item(int id, ITEM_TYPE item)
 {
     arr_player[id].current_item = item;
     switch (item)
@@ -1593,18 +1590,18 @@ sc_ingame_packet GameMgr::get_packet(sc_ingame_packet packet) const
 
         sc_packet.player[i].pos = arr_player[id].cur_pos;
         sc_packet.player[i].look = arr_player[id].pl_look;
-        sc_packet.player[i].camera_look = arr_player[id].cam_look;
+        sc_packet.player[i].cameraLook = arr_player[id].cam_look;
         sc_packet.player[i].state = arr_player[id].state;
         sc_packet.player[i].id = i;
-        sc_packet.player[i].zone_num = zone_level_;
+        sc_packet.player[i].zoneNum = zone_level_;
         sc_packet.player[i].ps.hp = arr_player[id].ps.hp;
-        sc_packet.player[i].ps.max_hp = arr_player[id].ps.max_hp;
-        sc_packet.player[i].ps.attack_speed = arr_player[id].ps.attack_speed;
-        sc_packet.player[i].reload_enable = arr_player[id].reload_enable;
+        sc_packet.player[i].ps.maxHp = arr_player[id].ps.max_hp;
+        sc_packet.player[i].ps.attackSpeed = arr_player[id].ps.attack_speed;
+        sc_packet.player[i].reloadEnable = arr_player[id].reload_enable;
         sc_packet.player[i].ammo = arr_player[id].ps.ammo;
         memset(sc_packet.player[i].bullet, NULL, sizeof(Bullet) * 5);
         memcpy(sc_packet.player[i].bullet, arr_player[id].bullet, sizeof(Bullet) * 5);
-        sc_packet.player[i].current_item = arr_player[id].current_item;
+        sc_packet.player[i].currentItem = arr_player[id].current_item;
     }
 
     for (int i = 0; i < max_object; ++i) // 오류 발생
@@ -1613,38 +1610,38 @@ sc_ingame_packet GameMgr::get_packet(sc_ingame_packet packet) const
         sc_packet.npc[i].pos = npc_[i].cur_pos;
         sc_packet.npc[i].look = npc_[i].look_vec;
         sc_packet.npc[i].hp = npc_[i].hp;
-        sc_packet.npc[i].attack_enable = npc_[i].attack_packet_enable;
+        sc_packet.npc[i].attackEnable = npc_[i].attack_packet_enable;
         sc_packet.npc[i].state = npc_[i].state;
     }
 
-    for (int i = 0; i < max_interaction; ++i)
+    for (int i = 0; i < max_intraction; ++i)
     {
         sc_packet.interaction[i].pos = interaction_[i].pos;
         sc_packet.interaction[i].look = interaction_[i].lookvec;
         if (interaction_[i].item.size() != 0)
         {
-            sc_packet.interaction[i].item[0].item_type = interaction_[i].item.at(0).item;
-            sc_packet.interaction[i].item[0].is_alive = !interaction_[i].item.at(0).getEnable;
-            sc_packet.interaction[i].item[1].item_type = interaction_[i].item.at(1).item;
-            sc_packet.interaction[i].item[1].is_alive = !interaction_[i].item.at(1).getEnable;
-            sc_packet.interaction[i].item[2].item_type = interaction_[i].item.at(2).item;
-            sc_packet.interaction[i].item[2].is_alive = !interaction_[i].item.at(2).getEnable;
-            sc_packet.interaction[i].item[3].item_type = interaction_[i].item.at(3).item;
-            sc_packet.interaction[i].item[3].is_alive = !interaction_[i].item.at(3).getEnable;
+            sc_packet.interaction[i].item[0].itemType = interaction_[i].item.at(0).item;
+            sc_packet.interaction[i].item[0].isAlive = !interaction_[i].item.at(0).getEnable;
+            sc_packet.interaction[i].item[1].itemType = interaction_[i].item.at(1).item;
+            sc_packet.interaction[i].item[1].isAlive = !interaction_[i].item.at(1).getEnable;
+            sc_packet.interaction[i].item[2].itemType = interaction_[i].item.at(2).item;
+            sc_packet.interaction[i].item[2].isAlive = !interaction_[i].item.at(2).getEnable;
+            sc_packet.interaction[i].item[3].itemType = interaction_[i].item.at(3).item;
+            sc_packet.interaction[i].item[3].isAlive = !interaction_[i].item.at(3).getEnable;
         }
-        sc_packet.interaction[i].interact_enable = interaction_[i].interact_enable;
+        sc_packet.interaction[i].interactEnable = interaction_[i].interact_enable;
         sc_packet.interaction[i].state = interaction_[i].state;
     }
 
     for (int i = 0; i < stone_attack_.size(); ++i)
     {
-        sc_packet.stone[i].active_enable = stone_attack_[i].active_enable;
+        sc_packet.stone[i].activeEnable = stone_attack_[i].active_enable;
         sc_packet.stone[i].pos = stone_attack_[i].pos;
     }
 
     for (int i = 0; i < 20; ++i)
     {
-        sc_packet.attack[i].active_enable = range_attack_[i].active_enable;
+        sc_packet.attack[i].activeEnable = range_attack_[i].active_enable;
         sc_packet.attack[i].pos = range_attack_[i].pos;
     }
 
