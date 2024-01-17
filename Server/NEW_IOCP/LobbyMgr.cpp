@@ -1,37 +1,27 @@
 ﻿#include "LobbyMgr.h"
 
 
-LobbyMgr::LobbyMgr(): retval(0), addrlen(0), buf{}, wsa(), sock(0), listen_sock(0), client_sock(0), serveraddr(),
-                      user_id{},
-                      db_buf{},
-                      user_time(0),
-                      henv(nullptr),
-                      hdbc(nullptr),
-                      retcode(0),
-                      szUser_Name{},
-                      dUser_time(0),
-                      dUser_level(0), ip_addr{},
-                      clientaddr(),
-                      CSpacket(),
-                      SCpacket()
+LobbyMgr::LobbyMgr()
 {
-    for (int i = 0; i < max_users; ++i)
-    {
+    for (int i = 0; i < MAX_USERS; ++i) {
         arr_player[i].ready = false;
-        arr_player[i].m_state = plst_free;
+        arr_player[i].m_state = PLST_FREE;
     }
 
-    for (int r_id = 0; r_id < max_room; ++r_id)
-    {
-        for (int p_id = 0; p_id < max_player; ++p_id);
+    for (int r_id = 0; r_id < MAX_ROOM; ++r_id) {
+        for (int p_id = 0; p_id < MAX_PLAYER; ++p_id)
+            //strcpy(arr_lobby[r_id].pl[p_id].name);
+            ;
     }
-}
+
+    
+ }
 
 LobbyMgr::~LobbyMgr()
 {
 }
 
-void LobbyMgr::g_worker(const HANDLE h_iocp, const SOCKET l_socket)
+void LobbyMgr::g_worker(HANDLE h_iocp, SOCKET l_socket)
 {
     cout << "Running Worker Thread" << endl;
 
@@ -40,10 +30,10 @@ void LobbyMgr::g_worker(const HANDLE h_iocp, const SOCKET l_socket)
         ULONG_PTR ikey;
         WSAOVERLAPPED* over;
 
-        const BOOL ret = GetQueuedCompletionStatus(h_iocp, &num_bytes,
-                                                   &ikey, &over, INFINITE);
+        BOOL ret = GetQueuedCompletionStatus(h_iocp, &num_bytes,
+            &ikey, &over, INFINITE);
 
-        const int key = static_cast<int>(ikey);
+        int key = static_cast<int>(ikey);
         if (FALSE == ret) {
             if (SERVERID == key) {
                 //display_error("GQCS : ", WSAGetLastError());
@@ -58,11 +48,10 @@ void LobbyMgr::g_worker(const HANDLE h_iocp, const SOCKET l_socket)
             //disconnect(key);
             continue;
         }
-        
         EX_OVER* ex_over = reinterpret_cast<EX_OVER*>(over);
 
         switch (ex_over->m_op) {
-        case op_recv: {
+        case OP_RECV: {
             unsigned char* packet_ptr = ex_over->m_packetbuf;
             int num_data = num_bytes + arr_player[key].m_prev_size;
             int packet_size = packet_ptr[0];
@@ -81,18 +70,18 @@ void LobbyMgr::g_worker(const HANDLE h_iocp, const SOCKET l_socket)
 
             break;
         }
-        case op_send:
+        case OP_SEND:
         {
             //
             delete ex_over;
             break;
         }
-        case op_accept:
+        case OP_ACCEPT:
         {
             //
             int c_id = get_new_player_id(ex_over->m_csocket);
             if (-1 != c_id) {
-                arr_player[c_id].m_recv_over.m_op = op_recv;
+                arr_player[c_id].m_recv_over.m_op = OP_RECV;
                 arr_player[c_id].m_prev_size = 0;
                 CreateIoCompletionPort(
                     reinterpret_cast<HANDLE>(arr_player[c_id].m_socket), h_iocp, c_id, 0);
@@ -101,9 +90,9 @@ void LobbyMgr::g_worker(const HANDLE h_iocp, const SOCKET l_socket)
                 //arr_player[c_id].CurPos.z -= 2000.f;
 
                 
-                sc_ingame_packet sc_packet;
-                sc_packet.id = c_id;
-                sc_packet.type = SC_SET_ID_PACKET;
+                sc_ingame_packet scpacket;
+                scpacket.id = c_id;
+                scpacket.type = SC_SET_ID_PACKET;
                 do_recv(c_id);
             }
             else {
@@ -111,7 +100,7 @@ void LobbyMgr::g_worker(const HANDLE h_iocp, const SOCKET l_socket)
             }
 
             memset(&ex_over->m_over, 0, sizeof(ex_over->m_over));
-            const SOCKET c_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+            SOCKET c_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
             ex_over->m_csocket = c_socket;
             AcceptEx(l_socket, c_socket,
                 ex_over->m_packetbuf, 0, 32, 32, NULL, &ex_over->m_over);
@@ -130,23 +119,23 @@ void LobbyMgr::acceptClient()
 {
 }
 
-void LobbyMgr::disconnect(const int p_id)
+void LobbyMgr::disconnect(int p_id)
 {
     {
         lock_guard <mutex> gl{ arr_player[p_id].m_slock };
-        if (arr_player[p_id].m_state = plst_free) return;
+        if (arr_player[p_id].m_state = PLST_FREE) return;
         closesocket(arr_player[p_id].m_socket);
-        arr_player[p_id].m_state = plst_free;
+        arr_player[p_id].m_state = PLST_FREE;
     }
     for (auto& pl : arr_player) {
         lock_guard<mutex> gl2{ pl.m_slock };
-        if (plst_ingame == pl.m_state)
+        if (PLST_INGAME == pl.m_state)
             cout << "remove: " << pl.id << endl;
             //send_remove_object(pl.id, p_id);
     }
 }
 
-void LobbyMgr::display_error(const char* msg, const int err_no)
+void LobbyMgr::display_error(const char* msg, int err_no)
 {
     WCHAR* lpMsgBuf;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -157,18 +146,18 @@ void LobbyMgr::display_error(const char* msg, const int err_no)
     LocalFree(lpMsgBuf);
 }
 
-void LobbyMgr::do_recv(const int key)
+void LobbyMgr::do_recv(int key)
 {
     arr_player[key].m_recv_over.m_wsabuf[0].buf =
         reinterpret_cast<char*>(arr_player[key].m_recv_over.m_packetbuf)
         + arr_player[key].m_prev_size;
-    arr_player[key].m_recv_over.m_wsabuf[0].len = max_buffer - arr_player[key].m_prev_size;
+    arr_player[key].m_recv_over.m_wsabuf[0].len = MAX_BUFFER - arr_player[key].m_prev_size;
     memset(&arr_player[key].m_recv_over.m_over, 0, sizeof(arr_player[key].m_recv_over.m_over));
     DWORD r_flag = 0;
-    const int ret = WSARecv(arr_player[key].m_socket, arr_player[key].m_recv_over.m_wsabuf, 1,
-                            NULL, &r_flag, &arr_player[key].m_recv_over.m_over, NULL);
+    int ret = WSARecv(arr_player[key].m_socket, arr_player[key].m_recv_over.m_wsabuf, 1,
+        NULL, &r_flag, &arr_player[key].m_recv_over.m_over, NULL);
     if (0 != ret) {
-        const int err_no = WSAGetLastError();
+        int err_no = WSAGetLastError();
         if (WSA_IO_PENDING != err_no) {
             display_error("WSARecv : ", WSAGetLastError());
             cout << "err_no: " << err_no << endl;
@@ -179,20 +168,20 @@ void LobbyMgr::do_recv(const int key)
 
 void LobbyMgr::do_send(int p_id, void* p)
 {
-    const int p_size = static_cast<int*>(p)[0];
-    int p_type = static_cast<int*>(p)[1];
+    int p_size = reinterpret_cast<int*>(p)[0];
+    int p_type = reinterpret_cast<int*>(p)[1];
     //cout << "To client [" << p_id << "] : ";
     //cout << "Packet [" << p_type << "]\n";
     EX_OVER* s_over = new EX_OVER;
-    s_over->m_op = op_send;
+    s_over->m_op = OP_SEND;
     memset(&s_over->m_over, 0, sizeof(s_over->m_over));
     memcpy(s_over->m_packetbuf, p, p_size);
     s_over->m_wsabuf[0].buf = reinterpret_cast<CHAR*>(s_over->m_packetbuf);
     s_over->m_wsabuf[0].len = p_size;
-    const int ret = WSASend(arr_player[p_id].m_socket, s_over->m_wsabuf, 1,
-                            NULL, 0, &s_over->m_over, 0);
+    int ret = WSASend(arr_player[p_id].m_socket, s_over->m_wsabuf, 1,
+        NULL, 0, &s_over->m_over, 0);
     if (0 != ret) {
-        const int err_no = WSAGetLastError();
+        int err_no = WSAGetLastError();
         if (WSA_IO_PENDING != err_no) {
             display_error("WSASend : ", WSAGetLastError());
             disconnect(p_id);
@@ -203,21 +192,21 @@ void LobbyMgr::do_send(int p_id, void* p)
 void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
 {
     switch (arr_player[p_id].m_state) {
-    case plst_free:
+    case PLST_FREE:
         break;
-    case plst_connected: {
-        const auto* cs_packet = reinterpret_cast<cs_lobby_packet*>(p_buf);
+    case PLST_CONNECTED: {
+        cs_lobby_packet* cspacket = reinterpret_cast<cs_lobby_packet*>(p_buf);
 
         // 플레이어 닉네임을 받아서 저장.
-        strcpy(arr_player[p_id].name, cs_packet->name);
-        const int r_id = 0; // room id를 찾아야 함
+        strcpy(arr_player[p_id].name, cspacket->name);
+        int r_id = 0; // room id를 찾아야 함
 
         arr_player[p_id].r_id = r_id;
         arr_player[p_id].id = p_id;
         DB_get_time(arr_player[p_id].name);
 
-        if (arr_lobby[r_id].pl.size() < max_player) {
-            lobby_player_info info;
+        if (arr_lobby[r_id].pl.size() < MAX_PLAYER) {
+            LOBBY_PLAYER_INFO info;
             strcpy(info.name, arr_player[p_id].name);
             info.ready = false;
             info.id = p_id;
@@ -227,40 +216,40 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
 
             packet = get_packet(r_id);
 
-            for (const auto& au : arr_lobby[r_id].pl) {
+            for (auto& au : arr_lobby[r_id].pl) {
                 do_send(au.id, &packet);
             } // 다른 플레이어에게 접속을 알려야함. 미구현. 패킷에는 포함되어 있음.
         }
 
-        arr_player[p_id].m_state = plst_inlobby;
+        arr_player[p_id].m_state = PLST_INLOBBY;
         break;
     }
-    case plst_inlobby: {
-        const auto cs_packet = reinterpret_cast<cs_lobby_packet*>(p_buf);
-        sc_lobby_packet sc_packet;
+    case PLST_INLOBBY: {
+        cs_lobby_packet* cspacket = reinterpret_cast<cs_lobby_packet*>(p_buf);
+        sc_lobby_packet scpacket;
 
-        const int r_id = arr_player[p_id].r_id;
-        arr_lobby[r_id].pl[p_id].ready = cs_packet->ready;     
-        arr_player[p_id].ready = cs_packet->ready;
-        arr_player[p_id].wp_type = cs_packet->weapon_type;
-        sc_packet = get_packet(r_id);
+        int r_id = arr_player[p_id].r_id;
+        arr_lobby[r_id].pl[p_id].ready = cspacket->ready;     
+        arr_player[p_id].ready = cspacket->ready;
+        arr_player[p_id].wp_type = cspacket->weapon_type;
+        scpacket = get_packet(r_id);
         
-        if (arr_lobby[r_id].pl.size() == max_player &&
+        if (arr_lobby[r_id].pl.size() == MAX_PLAYER &&
             arr_lobby[r_id].pl[0].ready == true && arr_lobby[r_id].pl[1].ready == true
             && arr_lobby[r_id].pl[2].ready == true && arr_lobby[r_id].pl[3].ready == true) {
             cout << " all ready " << endl;
-            sc_packet.type = SC_LOBBY_TO_GAME_PACKET;
+            scpacket.type = SC_LOBBY_TO_GAME_PACKET;
 
-            int id[max_player] = { arr_lobby[r_id].pl[0].id, arr_lobby[r_id].pl[1].id,
+            int id[MAX_PLAYER] = { arr_lobby[r_id].pl[0].id, arr_lobby[r_id].pl[1].id,
             arr_lobby[r_id].pl[2].id, arr_lobby[r_id].pl[3].id };
 
 
             int count = 0;
 
             for (auto& au : arr_lobby[r_id].pl) {
-                do_send(au.id, &sc_packet);
+                do_send(au.id, &scpacket);
 
-                arr_player[au.id].m_state = plst_ingame;
+                arr_player[au.id].m_state = PLST_INGAME;
 
                 sc_ingame_packet set_id_packet;
                 set_id_packet.id = count;
@@ -272,35 +261,35 @@ void LobbyMgr::process_packet(int p_id, unsigned char* p_buf)
                 ++count;
             }
             
-            arr_game[r_id].init_game(id);
+            arr_game[r_id].InitGame(id);
             arr_game[r_id].s_time = chrono::system_clock::now();
         }
         else
-            do_send(p_id, &sc_packet);
+            do_send(p_id, &scpacket);
 
         break;
     }
-    case plst_ingame:
-        sc_ingame_packet sc_packet;
+    case PLST_INGAME:
+        sc_ingame_packet scpacket;
 
-        const int r_id = arr_player[p_id].r_id;
+        int r_id = arr_player[p_id].r_id;
+
         arr_game[r_id].process_packet(p_id, p_buf);
 
-        sc_packet = arr_game[r_id].get_packet(sc_packet);
+        scpacket = arr_game[r_id].GetPacket(scpacket);
         
-        do_send(p_id, &sc_packet);
+        do_send(p_id, &scpacket);
 
         break;
-    default: ;
     }
 }
 
 int LobbyMgr::get_new_player_id(SOCKET p_socket)
 {
-    for (int i = 0; i <= max_users; ++i) {
+    for (int i = 0; i <= MAX_USERS; ++i) {
         lock_guard<mutex> lg{ arr_player[i].m_slock };
-        if (plst_free == arr_player[i].m_state) {
-            arr_player[i].m_state = plst_connected;
+        if (PLST_FREE == arr_player[i].m_state) {
+            arr_player[i].m_state = PLST_CONNECTED;
             arr_player[i].m_socket = p_socket;
             arr_player[i].name[0] = 0;
             return i;
@@ -332,16 +321,20 @@ sc_lobby_packet LobbyMgr::get_packet(int r_id)
 void LobbyMgr::Update()
 {
     while (true) {
+        /*for (int i = 0; i < g_list.size(); ++i) {
+            if (chrono::system_clock::now() - arr_game[i].cur_update_time > 16ms)
+                arr_game[i].Update();
+        }*/
         for (auto& p : arr_game)
         {
-            if (!p.is_running) continue;
+            if (!p.isRunning) continue;
             if (chrono::system_clock::now() - p.cur_update_time > 16ms)
-                p.update();
+                p.Update();
         }
     }
 }
 
-void LobbyMgr::db_connect()
+void LobbyMgr::DB_connect()
 {
     // Allocate environment handle  
     retcode = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
@@ -375,7 +368,7 @@ void LobbyMgr::db_connect()
 
 }
 
-void LobbyMgr::DB_update(char name[max_name], int time)
+void LobbyMgr::DB_update(char name[MAX_NAME], int time)
 {
     sprintf_s(db_buf, sizeof(db_buf), "EXEC update_time %s, %d", user_id, user_time);
     retcode = SQLExecDirect(hstmt, (SQLCHAR*) db_buf, SQL_NTS);
@@ -383,7 +376,7 @@ void LobbyMgr::DB_update(char name[max_name], int time)
     cout << "retcode: " << retcode << endl;
 }
 
-int LobbyMgr::DB_get_time(char name[max_name])
+int LobbyMgr::DB_get_time(char name[MAX_NAME])
 {
     sprintf_s(db_buf, sizeof(db_buf), "EXEC select_time %s", name);
     retcode = SQLExecDirect(hstmt, (SQLCHAR*) db_buf, SQL_NTS);
@@ -413,7 +406,7 @@ int LobbyMgr::DB_get_time(char name[max_name])
     return dUser_time;
 }
 
-void LobbyMgr::err_quit(const char* msg)
+void LobbyMgr::err_quit(char* msg)
 {
     LPVOID lpMsgBuf;
     FormatMessage(

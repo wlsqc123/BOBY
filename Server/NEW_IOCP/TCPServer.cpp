@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 	listen(listenSocket, SOMAXCONN);
 
 	EX_OVER accept_over;
-	accept_over.m_op = op_accept;
+	accept_over.m_op = OP_ACCEPT;
 	memset(&accept_over.m_over, 0, sizeof(accept_over.m_over));
 	SOCKET c_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	accept_over.m_csocket = c_socket;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Connect to DB
-	lobby_mgr.db_connect();
+	lobby_mgr.DB_connect();
 
 	vector <thread> worker_threads;
 	for (int i = 0; i < 1; ++i)

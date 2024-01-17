@@ -12,65 +12,71 @@
 #include <mutex>
 #include <atomic>
 #include <map>
+#include <queue>
 #include <array>
 
 #include <d3d12.h>
+#include <dxgi1_4.h>
+#include <D3Dcompiler.h>
 #include <DirectXMath.h>
-#include <DirectXPackedVector.h>
+#include <DirectXPackedVector.h>
+#include <DirectXColors.h>
 #include <DirectXCollision.h>
 
 #include "_pack.h"
 #include "Protocol.h"
 
+#include <tchar.h>
+
 #pragma comment(lib,"ws2_32")
 #pragma comment(lib, "MSWSock.lib")
 
-constexpr int max_ammo = 0;
-constexpr int max_users = 400;
-constexpr int max_room = 100;
+constexpr int MAX_AMMO = 0;
+constexpr int MAX_USERS = 400;
+constexpr int MAX_ROOM = 100;
 
-constexpr float player_speed = 10;
+constexpr float PLAYER_SPEED = 10;
 
-constexpr float obb_scale_player_x = 30.f;
-constexpr float obb_scale_player_y = 30.f;
-constexpr float obb_scale_player_z = 30.f;
+constexpr float OBB_SCALE_PLAYER_X = 30.f;
+constexpr float OBB_SCALE_PLAYER_Y = 30.f;
+constexpr float OBB_SCALE_PLAYER_Z = 30.f;
 
-constexpr float obb_scale_magmaa_x = 36.f;
-constexpr float obb_scale_magmaa_y = 60.f;
-constexpr float obb_scale_magmaa_z = 45.f;
-constexpr int hp_magmaa = 10;
+constexpr float OBB_SCALE_Magmaa_X = 36.f;
+constexpr float OBB_SCALE_Magmaa_Y = 60.f;
+constexpr float OBB_SCALE_Magmaa_Z = 45.f;
+constexpr int HP_Magmaa = 10;
 
-constexpr float obb_scale_golem_x = 120.f;
-constexpr float obb_scale_golem_y = 400.f;
-constexpr float obb_scale_golem_z = 100.f;
-constexpr int hp_golem = 10;
+constexpr float OBB_SCALE_Golem_X = 120.f;
+constexpr float OBB_SCALE_Golem_Y = 400.f;
+constexpr float OBB_SCALE_Golem_Z = 100.f;
+constexpr int HP_Golem = 10;
 
-constexpr float obb_scale_orge_x = 45.f;
-constexpr float obb_scale_orge_y = 65.f;
-constexpr float obb_scale_orge_z = 25.f;
-constexpr int hp_orge = 10;
+constexpr float OBB_SCALE_Orge_X = 45.f;
+constexpr float OBB_SCALE_Orge_Y = 65.f;
+constexpr float OBB_SCALE_Orge_Z = 25.f;
+constexpr int HP_Orge = 10;
 
-constexpr float obb_scale_chest_x = 70.f;
-constexpr float obb_scale_chest_y = 35.f;
-constexpr float obb_scale_chest_z = 38.5f;
+constexpr float OBB_SCALE_Chest_X = 70.f;
+constexpr float OBB_SCALE_Chest_Y = 35.f;
+constexpr float OBB_SCALE_Chest_Z = 38.5f;
 
-constexpr float obb_scale_lever_x = 20.f;
-constexpr float obb_scale_lever_y = 30.f;
-constexpr float obb_scale_lever_z = 30.f;
+constexpr float OBB_SCALE_Lever_X = 20.f;
+constexpr float OBB_SCALE_Lever_Y = 30.f;
+constexpr float OBB_SCALE_Lever_Z = 30.f;
 
-constexpr float obb_scale_door_x = 162.f;
-constexpr float obb_scale_door_y = 112.f;
-constexpr float obb_scale_door_z = 22.5f;
+constexpr float OBB_SCALE_Door_X = 162.f;
+constexpr float OBB_SCALE_Door_Y = 112.f;
+constexpr float OBB_SCALE_Door_Z = 22.5f;
 
 using namespace std;
 using namespace DirectX::PackedVector;
 using namespace DirectX;
 
 
-enum monster { magma, golem, ogre};
-enum static_object {chest, door, lever, stone, mud, rocks};
-enum op_type { op_recv, op_send, op_accept };
-enum pl_state { plst_free, plst_connected, plst_inlobby, plst_ingame, plst_end };
+enum Monster { MAGMA, GOLEM, OGRE};
+enum STATIC_OBJECT {CHEST, DOOR, LEVER, STONE, MUD, ROCKS};
+enum OP_TYPE { OP_RECV, OP_SEND, OP_ACCEPT };
+enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INLOBBY, PLST_INGAME, PLST_END };
 enum WALL_TYPE {wall, fence};
 
 
@@ -78,25 +84,25 @@ struct EX_OVER
 {
 	WSAOVERLAPPED	m_over;
 	WSABUF			m_wsabuf[1];
-	unsigned char	m_packetbuf[max_buffer];
-	op_type			m_op;
+	unsigned char	m_packetbuf[MAX_BUFFER];
+	OP_TYPE			m_op;
 	SOCKET			m_csocket;					// OP_ACCEPT������ ���
 };
 
 struct player_status
 {
-	int		max_hp = 0;
+	int		maxhp = 0;
 	int		hp = 0;
 	float	speed = 5.f;
-	float	attack_speed = 0;
-	float	attack_damage = 0;
+	float	attackSpeed = 0;
+	float	attackDamage = 0;
 	int		heal = 0;
 	int		block = 0;
-	int		boss_damage = 0;
-	int		kill_max_hp = 0;
-	int		instant_death = 0;
+	int		bossDamage = 0;
+	int		killMaxHp = 0;
+	int		instantDeath = 0;
 	short	ammo;
-	short	max_ammo;
+	short	maxAmmo;
 };
 
 struct item_status
@@ -105,10 +111,10 @@ struct item_status
 	bool getEnable = false;
 };
 
-struct player
+struct Player
 {
 	mutex				m_slock;
-	atomic <pl_state>	m_state;
+	atomic <PL_STATE>	m_state;
 	SOCKET				m_socket;
 
 	EX_OVER				m_recv_over;
@@ -117,29 +123,29 @@ struct player
 	////////
 	int r_id;
 	bool ready;
-	char name[max_name];
+	char name[MAX_NAME];
 	//...
 	/// /////
 	int		id;
 	player_status ps;
 	map<ITEM_TYPE, int> pl_items;
-	ITEM_TYPE			current_item;
-	ITEM_TYPE			active_item;
+	ITEM_TYPE			currentItem;
+	ITEM_TYPE			activeItem;
 	WEAPON_TYPE			wp_type;
 
-	Vector3				init_pos;
-	Vector3				cur_pos;
-	Vector3				prev_pos;
+	Vector3				InitPos;
+	Vector3				CurPos;
+	Vector3				PrevPos;
 	Vector3				pl_look;
 	Vector3				cam_look;
 
 	obj_state	state;
 	
 	Bullet		bullet[5];
-	bool		reload_enable;
+	bool		reloadEnable;
 
-	std::chrono::system_clock::time_point time_dead;
-	std::chrono::system_clock::time_point time_reload;
+	std::chrono::system_clock::time_point timeDead;
+	std::chrono::system_clock::time_point timeReload;
 
 	BoundingOrientedBox OOBB;
 };
@@ -151,48 +157,48 @@ struct NPC
 	int			type;
 	int			hp;
 	float		speed;
-	int			dest_pl;
-	monster		mob;
+	int			destPl;
+	Monster		mob;
 	obj_state	state;
-	int			attack_range;
+	int			attackRange;
 	int			sight;
-	int			zone_num;
-	bool		is_attack;
-	LONGLONG	cool_time;
-	bool		attack_packet_enable;
+	int			zoneNum;
+	bool		isAttack;
+	LONGLONG	coolTime;
+	bool		attackPacketEnable;
 
-	Vector3 init_pos;
-	Vector3	cur_pos;
-	Vector3	prev_pos;
-	Vector3	look_vec;
-	Vector3	cam_lookvec;
+	Vector3 InitPos;
+	Vector3	CurPos;
+	Vector3	PrevPos;
+	Vector3	Lookvec;
+	Vector3	camLookvec;
 
 	// Ÿ�̸� �۾����̿���
-	std::chrono::system_clock::time_point time_last_attack;
-	std::chrono::system_clock::time_point time_death;
+	std::chrono::system_clock::time_point timeLastAttack;
+	std::chrono::system_clock::time_point timeDeath;
 
 
 	BoundingOrientedBox OOBB;
 };
 
-struct interaction
+struct INTERACTION
 {
 	int			id;
 	int			type;
 	obj_state	state;
-	static_object object_name;
+	STATIC_OBJECT objectName;
 
-	Vector3 pos;
-	Vector3	lookvec;
-	Vector3	cam_lookvec;
+	Vector3 Pos;
+	Vector3	Lookvec;
+	Vector3	camLookvec;
 	vector<item_status> item;
-	bool	interact_enable;
-	int		zone_num;
+	bool interactEnable;
+	int			zoneNum;
 
 	BoundingOrientedBox OOBB;
 };
 
-struct structure
+struct Structure
 {
 	Vector3 center;
 	Vector3 extend;
@@ -201,18 +207,18 @@ struct structure
 	BoundingOrientedBox OOBB;
 };
 
-struct range_attack
+struct RangeAttack
 {
 	Vector3 pos;
 	Vector3 look;
 
 	BoundingOrientedBox OOBB;
-	bool	active_enable;
+	bool	activeEnable;
 	float	speed;
-	std::chrono::system_clock::time_point live_time;
+	std::chrono::system_clock::time_point liveTime;
 };
 
-struct client
+struct Client
 {
 	SOCKET		sock;
 	WORD		id;
@@ -226,12 +232,12 @@ struct client
 	float		speed;
 
 	BoundingOrientedBox bounding_box;
-	void set_OOBB(const XMFLOAT3 xm_center, const XMFLOAT3 xm_extends, const XMFLOAT4 xm_orientation) {
-		bounding_box = BoundingOrientedBox(xm_center, xm_extends, xm_orientation);
+	void SetOOBB(XMFLOAT3 xmCenter, XMFLOAT3 xmExtends, XMFLOAT4 xmOrientation) {
+		bounding_box = BoundingOrientedBox(xmCenter, xmExtends, xmOrientation);
 	}
 };
 
-struct object
+struct OBJECT
 {
 	obj_type type;
 	WORD id;
@@ -242,24 +248,33 @@ struct object
 	float	speed;
 };
 
-struct lobby_player_info
+struct LOBBY_PLAYER_INFO
 {
 	int		id;
-	char	name[max_name];
+	char	name[MAX_NAME];
 	bool	ready;
 };
 
-struct lobby_room
+struct LOBBY_ROOM
 {
-	vector <lobby_player_info> pl;
+	vector <LOBBY_PLAYER_INFO> pl;
 };
 
-struct zone
+struct ZONE
 {
-	vector <int> monster_id;
-	bool is_clear;
+	vector <int> monsterID;
+	bool isClear;
 };
 
 
-extern array <player, max_users> arr_player;
-extern array <lobby_room, max_room> arr_lobby;
+extern array <Player, MAX_USERS> arr_player;
+extern array <LOBBY_ROOM, MAX_ROOM> arr_lobby;
+
+
+
+////////////////////////////////////////////////////////////////
+
+
+//queue <PLAYER_INFO> Lobby;
+//queue <PLAYER_INFO> from_Gamemgr_to_Lobby;
+

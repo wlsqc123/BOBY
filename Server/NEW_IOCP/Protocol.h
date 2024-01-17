@@ -1,24 +1,24 @@
 #pragma once
 
 enum obj_type { type_none, type_npc, type_static, type_player, type_item };
-enum obj_state { none, move, attack, hit, dead, interact};
+enum obj_state { none, move, attack, hit, dead, interaction};
 
-constexpr int max_buffer = 4096;
+constexpr int MAX_BUFFER = 4096;
 
 //monster
-constexpr int magmamonster_num = 9;
-constexpr int golemmonster_num = 1;
-constexpr int orgemonster_num = 8;
+constexpr int MAGMAMONSTER_NUM = 9;
+constexpr int GOLEMMONSTER_NUM = 1;
+constexpr int ORGEMONSTER_NUM = 8;
 
 //interaction
-constexpr int chestobject_num = 6;
-constexpr int doorobject_num = 6;
-constexpr int leverobject_num = 1;
+constexpr int CHESTOBJECT_NUM = 6;
+constexpr int DOOROBJECT_NUM = 6;
+constexpr int LEVEROBJECT_NUM = 1;
 
-constexpr int max_object = magmamonster_num + golemmonster_num + orgemonster_num;
-constexpr int max_intraction = chestobject_num + doorobject_num + leverobject_num + 1/* + 6*/;
-constexpr int max_player = 4;
-constexpr int max_name = 16;
+constexpr int MAX_OBJECT = MAGMAMONSTER_NUM + GOLEMMONSTER_NUM + ORGEMONSTER_NUM;
+constexpr int MAX_INTRACTION = CHESTOBJECT_NUM + DOOROBJECT_NUM + LEVEROBJECT_NUM + 1/* + 6*/;
+constexpr int MAX_PLAYER = 4;
+constexpr int MAX_NAME = 16;
 
 enum ITEM_TYPE
 {
@@ -148,9 +148,9 @@ struct sc_ingame_packet
 	int					size;
 	int					type;
 	int					id;
-	player_packet		player[max_player];
-	npc_info			npc[max_object];
-	interaction_packet  interaction[max_intraction];
+	player_packet		player[MAX_PLAYER];
+	npc_info			npc[MAX_OBJECT];
+	interaction_packet  interaction[MAX_INTRACTION];
 	attack_packet		attack[20];
 	attack_packet		stone[10];
 	int					play_time;
@@ -169,7 +169,7 @@ struct cs_ingame_packet
 
 struct lobby_info
 {
-	char name[max_name];
+	char name[MAX_NAME];
 	bool ready;
 };
 
@@ -177,7 +177,7 @@ struct sc_lobby_packet
 {
 	int size;
 	int type;
-	lobby_info info[max_player];
+	lobby_info info[MAX_PLAYER];
 };
 
 struct cs_lobby_packet
@@ -185,7 +185,7 @@ struct cs_lobby_packet
 	int size;
 	int type;
 	int r_id;
-	char name[max_name];
+	char name[MAX_NAME];
 	bool ready;
 	WEAPON_TYPE weapon_type;
 };
