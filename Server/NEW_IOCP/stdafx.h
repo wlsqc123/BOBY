@@ -64,203 +64,208 @@ using namespace DirectX::PackedVector;
 using namespace DirectX;
 
 
-enum Monster { MAGMA, GOLEM, OGRE};
-enum STATIC_OBJECT {CHEST, DOOR, LEVER, STONE, MUD, ROCKS};
+enum Monster { MAGMA, GOLEM, OGRE };
+
+enum STATIC_OBJECT { CHEST, DOOR, LEVER, STONE, MUD, ROCKS };
+
 enum OP_TYPE { OP_RECV, OP_SEND, OP_ACCEPT };
+
 enum PL_STATE { PLST_FREE, PLST_CONNECTED, PLST_INLOBBY, PLST_INGAME, PLST_END };
-enum WALL_TYPE {wall, fence};
+
+enum WALL_TYPE { wall, fence };
 
 
 struct EX_OVER
 {
-	WSAOVERLAPPED	m_over;
-	WSABUF			m_wsabuf[1];
-	unsigned char	m_packetbuf[MAX_BUFFER];
-	OP_TYPE			m_op;
-	SOCKET			m_csocket;					// OP_ACCEPT������ ���
+    WSAOVERLAPPED m_over;
+    WSABUF m_wsabuf[1];
+    unsigned char m_packetbuf[MAX_BUFFER];
+    OP_TYPE m_op;
+    SOCKET m_csocket; // OP_ACCEPT������ ���
 };
 
 struct player_status
 {
-	int		maxhp = 0;
-	int		hp = 0;
-	float	speed = 5.f;
-	float	attackSpeed = 0;
-	float	attackDamage = 0;
-	int		heal = 0;
-	int		block = 0;
-	int		bossDamage = 0;
-	int		killMaxHp = 0;
-	int		instantDeath = 0;
-	short	ammo;
-	short	maxAmmo;
+    int maxhp = 0;
+    int hp = 0;
+    float speed = 5.f;
+    float attackSpeed = 0;
+    float attackDamage = 0;
+    int heal = 0;
+    int block = 0;
+    int bossDamage = 0;
+    int killMaxHp = 0;
+    int instantDeath = 0;
+    short ammo;
+    short maxAmmo;
 };
 
 struct item_status
 {
-	ITEM_TYPE item;
-	bool getEnable = false;
+    ITEM_TYPE item;
+    bool getEnable = false;
 };
 
 struct Player
 {
-	mutex				m_slock;
-	atomic <PL_STATE>	m_state;
-	SOCKET				m_socket;
+    mutex m_slock;
+    atomic<PL_STATE> m_state;
+    SOCKET m_socket;
 
-	EX_OVER				m_recv_over;
-	int					m_prev_size;
+    EX_OVER m_recv_over;
+    int m_prev_size;
 
-	////////
-	int r_id;
-	bool ready;
-	char name[MAX_NUM_NAME];
-	//...
-	/// /////
-	int		id;
-	player_status ps;
-	map<ITEM_TYPE, int> pl_items;
-	ITEM_TYPE			currentItem;
-	ITEM_TYPE			activeItem;
-	WEAPON_TYPE			wp_type;
+    ////////
+    int r_id;
+    bool ready;
+    char name[MAX_NUM_NAME];
+    //...
+    /// /////
+    int id;
+    player_status status;
+    map<ITEM_TYPE, int> pl_items;
+    ITEM_TYPE currentItem;
+    ITEM_TYPE activeItem;
+    WEAPON_TYPE wp_type;
 
-	Vector3				InitPos;
-	Vector3				CurPos;
-	Vector3				PrevPos;
-	Vector3				pl_look;
-	Vector3				cam_look;
+    Vector3 InitPos;
+    Vector3 CurPos;
+    Vector3 PrevPos;
+    Vector3 pl_look;
+    Vector3 cam_look;
 
-	ObjectState	state;
-	
-	Bullet		bullet[5];
-	bool		reloadEnable;
+    ObjectState state;
 
-	std::chrono::system_clock::time_point timeDead;
-	std::chrono::system_clock::time_point timeReload;
+    Bullet bullet[5];
+    bool reloadEnable;
 
-	BoundingOrientedBox OOBB;
+    std::chrono::system_clock::time_point timeDead;
+    std::chrono::system_clock::time_point timeReload;
+
+    BoundingOrientedBox OOBB;
 };
 
 
 struct NPC
 {
-	int			id;
-	int			type;
-	int			hp;
-	float		speed;
-	int			destPl;
-	Monster		mob;
-	ObjectState	state;
-	int			attackRange;
-	int			sight;
-	int			zoneNum;
-	bool		isAttack;
-	LONGLONG	coolTime;
-	bool		attackPacketEnable;
+    int id;
+    int type;
+    int hp;
+    float speed;
+    int destPl;
 
-	Vector3 InitPos;
-	Vector3	CurPos;
-	Vector3	PrevPos;
-	Vector3	Lookvec;
-	Vector3	camLookvec;
+    Monster mob;
+    ObjectState state;
 
-	// Ÿ�̸� �۾����̿���
-	std::chrono::system_clock::time_point timeLastAttack;
-	std::chrono::system_clock::time_point timeDeath;
+    int attackRange;
+    int sight;
+    int zoneNum;
+    bool isAttack;
+    LONGLONG coolTime;
+    bool attackPacketEnable;
 
+    Vector3 InitPos;
+    Vector3 CurPos;
+    Vector3 PrevPos;
+    Vector3 Lookvec;
+    Vector3 camLookvec;
 
-	BoundingOrientedBox OOBB;
+    std::chrono::system_clock::time_point time_last_attack;
+    std::chrono::system_clock::time_point time_death;
+
+    BoundingOrientedBox OOBB;
 };
 
 struct INTERACTION
 {
-	int			id;
-	int			type;
-	ObjectState	state;
-	STATIC_OBJECT objectName;
+    int id;
+    int type;
+    ObjectState state;
+    STATIC_OBJECT objectName;
 
-	Vector3 Pos;
-	Vector3	Lookvec;
-	Vector3	camLookvec;
-	vector<item_status> item;
-	bool interactEnable;
-	int			zoneNum;
+    Vector3 Pos;
+    Vector3 Lookvec;
+    Vector3 camLookvec;
+    vector<item_status> item;
+    bool interactEnable;
+    int zoneNum;
 
-	BoundingOrientedBox OOBB;
+    BoundingOrientedBox OOBB;
 };
 
 struct Structure
 {
-	Vector3 center;
-	Vector3 extend;
-	WALL_TYPE type;
+    Vector3 center;
+    Vector3 extend;
+    WALL_TYPE type;
 
-	BoundingOrientedBox OOBB;
+    BoundingOrientedBox OOBB;
 };
 
 struct RangeAttack
 {
-	Vector3 pos;
-	Vector3 look;
+    Vector3 pos;
+    Vector3 look;
 
-	BoundingOrientedBox OOBB;
-	bool	activeEnable;
-	float	speed;
-	std::chrono::system_clock::time_point liveTime;
+    BoundingOrientedBox OOBB;
+    bool activeEnable;
+    float speed;
+    std::chrono::system_clock::time_point liveTime;
 };
 
 struct Client
 {
-	SOCKET		sock;
-	WORD		id;
+    SOCKET sock;
+    WORD id;
 
-	KeyInput	input;
-	Vector3		pos;
-	Vector3		look;
-	Vector3		camera_look;
+    KeyInput input;
+    Vector3 pos;
+    Vector3 look;
+    Vector3 camera_look;
 
-	int			hp;
-	float		speed;
+    int hp;
+    float speed;
 
-	BoundingOrientedBox bounding_box;
-	void SetOOBB(XMFLOAT3 xmCenter, XMFLOAT3 xmExtends, XMFLOAT4 xmOrientation) {
-		bounding_box = BoundingOrientedBox(xmCenter, xmExtends, xmOrientation);
-	}
+    BoundingOrientedBox bounding_box;
+
+    void SetOOBB(XMFLOAT3 xmCenter, XMFLOAT3 xmExtends, XMFLOAT4 xmOrientation)
+    {
+        bounding_box = BoundingOrientedBox(xmCenter, xmExtends, xmOrientation);
+    }
 };
 
 struct OBJECT
 {
-	ObjectType type;
-	WORD id;
+    ObjectType type;
+    WORD id;
 
-	Vector3 pos;
-	Vector3 look;
-	Vector3 prev_pos;
-	float	speed;
+    Vector3 pos;
+    Vector3 look;
+    Vector3 prev_pos;
+    float speed;
 };
 
 struct LOBBY_PLAYER_INFO
 {
-	int		id;
-	char	name[MAX_NUM_NAME];
-	bool	ready;
+    int id;
+    char name[MAX_NUM_NAME];
+    bool ready;
 };
 
 struct LOBBY_ROOM
 {
-	vector <LOBBY_PLAYER_INFO> pl;
+    vector<LOBBY_PLAYER_INFO> pl;
 };
 
 struct ZONE
 {
-	vector <int> monsterID;
-	bool isClear;
+    vector<int> monsterID;
+    bool isClear;
 };
 
 
-extern array <Player, MAX_USERS> arr_player;
-extern array <LOBBY_ROOM, MAX_ROOM> arr_lobby;
-
+extern array<Player, MAX_USERS> arr_player;
+extern array<LOBBY_ROOM, MAX_ROOM> arr_lobby;
 
 
 ////////////////////////////////////////////////////////////////
@@ -268,4 +273,3 @@ extern array <LOBBY_ROOM, MAX_ROOM> arr_lobby;
 
 //queue <PLAYER_INFO> Lobby;
 //queue <PLAYER_INFO> from_Gamemgr_to_Lobby;
-

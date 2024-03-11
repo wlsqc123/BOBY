@@ -2,86 +2,85 @@
 #include <limits>
 #include "Mathf.h"
 
-const float Mathf::epsilon{ std::numeric_limits<float>::epsilon() };
+const float Mathf::epsilon{std::numeric_limits<float>::epsilon()};
 
 const float Mathf::pi = 3.141592653589793238463f;
 
 float Mathf::Deg2Rad(float deg)
 {
-	return deg * pi / 180.0f;
+    return deg * pi / 180.0f;
 }
 
 float Mathf::Rad2Deg(float rad)
 {
-	return rad * 180.0f / pi;
+    return rad * 180.0f / pi;
 }
 
 bool Mathf::Approximately(float a, float b)
 {
-	return abs(a-b) < epsilon;
+    return abs(a - b) < epsilon;
 }
 
 float Mathf::Max(float a, float b)
 {
-	return (a < b) ? b : a;
+    return (a < b) ? b : a;
 }
 
 float Mathf::Min(float a, float b)
 {
-	return (a < b) ? a : b;
+    return (a < b) ? a : b;
 }
 
 float Mathf::Clamp(float value, float min, float max)
 {
-	if (value < min)
-		return min;
-	else if (value > max)
-		return max;
-	else
-		return value;
+    if (value < min)
+        return min;
+    if (value > max)
+        return max;
+    return value;
 }
 
 float Mathf::Clamp01(float value)
 {
-	return Clamp(value, 0.0f, 1.0f);
+    return Clamp(value, 0.0f, 1.0f);
 }
 
 float Mathf::InverseLerp(float a, float b, float value)
 {
-	return (value - a) / (b - a);
+    return (value - a) / (b - a);
 }
 
 float Mathf::Lerp(float a, float b, float t)
 {
-	return LerpUnclamped(a, b, Clamp01(t));
+    return LerpUnclamped(a, b, Clamp01(t));
 }
 
 float Mathf::LerpUnclamped(float a, float b, float t)
 {
-	return a + (b - a) * t;
+    return a + (b - a) * t;
 }
 
 
 float Mathf::MoveTowards(float current, float target, float max_delta)
 {
-	if (target - current < max_delta)
-		return target;
+    if (target - current < max_delta)
+        return target;
 
-	return current + max_delta;
+    return current + max_delta;
 }
 
 float Mathf::RandF()
 {
-	return (float)(rand()) / (float)RAND_MAX;
+    return static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
 }
 
 // Returns random float in [a, b).
 float Mathf::RandF(float a, float b)
 {
-	return a + RandF() * (b - a);
+    return a + RandF() * (b - a);
 }
 
 int Mathf::RandF(int a, int b)
 {
-	return a + rand() % ((b - a) + 1);
+    return a + rand() % ((b - a) + 1);
 }
